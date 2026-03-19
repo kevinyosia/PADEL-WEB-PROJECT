@@ -13,10 +13,16 @@ return new class extends Migration
     {
         Schema::create('reservations', function (Blueprint $table) {
         $table->id();
-        $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
-        $table->foreignId('court_id')->constrained('courts')->cascadeOnDelete();
-        $table->foreignId('coach_id')->nullable()->constrained('coaches')->nullOnDelete();
         
+        $table->unsignedBigInteger('user_id');
+        $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+        
+        $table->unsignedBigInteger('court_id');
+        $table->foreign('court_id')->references('id')->on('courts')->onDelete('cascade');
+        
+        $table->unsignedBigInteger('coach_id')->nullable();
+        $table->foreign('coach_id')->references('id')->on('coaches')->onDelete('set null');
+
         $table->date('tanggal_booking');
         $table->time('jam_mulai');
         $table->time('jam_selesai');

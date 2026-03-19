@@ -13,6 +13,9 @@ return new class extends Migration
     {
         Schema::create('membership', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('user_id')->unique()->constrained('users')->cascadeOnDelete();
+            $table->integer('total_poin_aktif')->default(0);
+            $table->integer('total_poin_terpakai')->default(0);
             $table->timestamps();
         });
     }
