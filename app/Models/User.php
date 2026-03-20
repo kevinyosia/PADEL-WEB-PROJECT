@@ -39,11 +39,34 @@ class User extends Authenticatable
      *
      * @return array<string, string>
      */
-    protected function casts(): array
+    protected function casts(): array 
     {
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+    // ==========================================
+    // RELASI DATABASE (TAMBAHAN UNTUK SKRIPSI)
+    // ==========================================
+    public function reservations()//satu User mampu melakukan BANYAK reservasi
+    {
+        return $this->hasMany(Reservation::class);
+    }
+    public function membership()//satu user hanya boleh memiliki 1 membership
+    {
+        return $this->hasOne(Membership::class);
+    }
+    public function PointHistories()//satu user bisa memiliki BANYAK riawayat poin
+    {
+        return $this->hasMany(PointHistory::class);
+    }
+    public function Feedbacks()//satu user bisa melakukan lebih dari 1 feedback
+    {
+        return $this->hasMany(Feedback::class);
+    }
+    public function CoachReview()//satu user bisa mereview coach lebih dari 1 kali
+    {
+        return $this->hasMany(CoachReview::class);
     }
 }
