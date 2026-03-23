@@ -8,11 +8,18 @@ class Equipment extends Model
     use HasFactory;
 
     protected $table = 'equipment'; 
-    protected $fillable = ['nama_alat', 'harga_sewa', 'stok'];
+    protected $fillable = [
+        'nama_alat',
+        'kategori',
+        'harga',
+        'deskripsi'
+    
+    
+    ];
 
     public function reservations()
     {
-        return $this->belongsToMany(Reservation::class, 'reservation_uqipment', 'equipment_id', 'reservation_id')
+        return $this->belongsToMany(Reservation::class, 'reservation_eqipment', 'equipment_id', 'reservation_id')
                     ->withPivot('jumlah_sewa', 'subtotal_harga')
                     ->withTimestamps();
     }
