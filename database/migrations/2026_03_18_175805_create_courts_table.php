@@ -15,7 +15,9 @@ return new class extends Migration
             $table->id();
             $table->string('nama_lapangan');
             $table->text('deskripsi')->nullable();
-            $table->integer('harga_per_jam');
+            $table->integer('harga_pagi_tengahmalam');
+            $table->integer('harga_malam');
+            $table->integer('harga_weekend');
             $table->enum('status', ['tersedia', 'maintenance'])->default('tersedia');
             $table->timestamps();
         });
