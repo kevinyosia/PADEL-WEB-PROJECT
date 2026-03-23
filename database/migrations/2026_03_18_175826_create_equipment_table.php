@@ -10,16 +10,17 @@ return new class extends Migration
      * Run the migrations.
      */
     public function up(): void
-    {
-        Schema::create('equipment', function (Blueprint $table) {
-            $table->id();
-            $table->string('nama_perlengkapan');
-            $table->integer('harga_sewa');
-            $table->integer('stok');
-            $table->timestamps();
-        });
-    }
-
+{
+    Schema::create('equipment', function (Blueprint $table) {
+        $table->id();
+        
+        $table->string('nama_alat');
+        $table->enum('kategori', ['sewa', 'beli']); 
+        $table->integer('harga');
+        $table->text('deskripsi')->nullable();
+        $table->timestamps();
+    });
+}
     /**
      * Reverse the migrations.
      */
