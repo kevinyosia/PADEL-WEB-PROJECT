@@ -7,7 +7,13 @@ class Court extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['nama_lapangan', 'tipe_lapangan', 'harga_per_jam', 'deskripsi'];
-
+    protected $fillable = [
+        'nama_lapangan',
+        'deskripsi',
+        'harga_pagi_tengahmalam',
+        'harga_malam',
+        'harga_weekend',
+        'status'
+    ];
     public function reservations() { return $this->hasMany(Reservation::class); }
 }
