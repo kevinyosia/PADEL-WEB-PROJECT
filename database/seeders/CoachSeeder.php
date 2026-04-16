@@ -4,6 +4,8 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\Coach;
+use App\Models\User; // Jangan lupa ini wajib ditambahkan
+use Illuminate\Support\Facades\Hash; // Ini juga wajib untuk password dummy
 
 class CoachSeeder extends Seeder
 {
@@ -42,8 +44,19 @@ class CoachSeeder extends Seeder
             ]
         ];
 
-        foreach ($coaches as $coach) {
-            Coach::create($coach);
+        foreach ($coaches as $index => $coachData) {
+            $user = User::create([
+                'name'     => $coachData['nama'],
+                'email'    => 'coach' . ($index + 1) . '@sistem.local', 
+                'phone'    => '-', 
+                'password' => Hash::make('rahasia123'),
+                'role'     => 'coach',
+            ]);
+            Coach::create([
+                'user_id'            => $user->id,
+                'deskripsi_keahlian' => $coachData['deskripsi'],
+                'harga_per_jam'      => $coachData['harga'],
+            ]);
         }
     }
 }

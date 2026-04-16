@@ -7,7 +7,12 @@ class Coach extends Model
 {
     use HasFactory;
     
-    protected $fillable = ['nama_coach', 'spesialisasi', 'harga_per_jam', 'kontak'];
+    protected $fillable = [
+        'user_id', 
+        'deskripsi_keahlian', 
+        'harga_per_jam',
+        'photo', 
+        ];
 
     public function reservations() { return $this->hasMany(Reservation::class); }
     public function reviews() { return $this->hasMany(CoachReview::class); }

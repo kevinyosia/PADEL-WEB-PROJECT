@@ -7,7 +7,8 @@ class Feedback extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'rating', 'komentar'];
+    protected $fillable = ['user_id', 'reservation_id', 'rating', 'komentar_review'];
 
     public function user() { return $this->belongsTo(User::class); }
+    public function reservation() { return $this->belongsTo(Reservation::class); }
 }

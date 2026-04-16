@@ -13,13 +13,11 @@ class Equipment extends Model
         'kategori',
         'harga',
         'deskripsi'
-    
-    
     ];
 
     public function reservations()
     {
-        return $this->belongsToMany(Reservation::class, 'reservation_eqipment', 'equipment_id', 'reservation_id')
+        return $this->belongsToMany(Reservation::class, 'reservation_equipment', 'equipment_id', 'reservation_id')
                     ->withPivot('jumlah_sewa', 'subtotal_harga')
                     ->withTimestamps();
     }

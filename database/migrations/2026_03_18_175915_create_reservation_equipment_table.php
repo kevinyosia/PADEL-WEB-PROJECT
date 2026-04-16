@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreign('reservation_id')->references('id')->on('reservations')->onDelete('cascade');
             $table->unsignedBigInteger('equipment_id');
             $table->foreign('equipment_id')->references('id')->on('equipment')->onDelete('cascade');
-            $table->integer('jumlah');
+            $table->integer('jumlah_sewa');
             $table->integer('subtotal_harga');
             $table->timestamps();
         });

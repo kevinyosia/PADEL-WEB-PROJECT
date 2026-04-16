@@ -13,11 +13,11 @@ class CourtSeeder extends Seeder
         for ($i = 1; $i <= 6; $i++) {
             $courts[] = [
                 'nama_lapangan' => 'Bandeja Padel Court ' . $i,
-                'tipe_lapangan' => 'Padel Court',
+                'deskripsi' => 'Lapangan padel indoor standar internasional dengan fasilitas premium.',
                 'harga_pagi_tengahmalam' => 275000,
                 'harga_malam' => 388000,
                 'harga_weekend' => 300000,
-                'deskripsi' => 'Tersedia'
+                'status' => 'Tersedia'
             ];
         }
 
