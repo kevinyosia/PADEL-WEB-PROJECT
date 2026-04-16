@@ -21,6 +21,8 @@ Route::middleware('auth')->group(function () {
     
     // <-- TAMBAHKAN RUTE COURTS DI SINI -->
     Route::get('/courts', [CourtController::class, 'index'])->name('courts.index');
+    Route::post('/booking', [BookingController::class, 'store'])->name('booking.store');
+    Route::post('/booking/{reservation}/pay', [BookingController::class, 'pay'])->name('booking.pay');
 });
 
 Route::get('/booking', [BookingController::class, 'index'])->name('booking.index');

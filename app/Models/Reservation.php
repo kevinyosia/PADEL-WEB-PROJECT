@@ -7,7 +7,8 @@ class Reservation extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'court_id', 'coach_id', 'tanggal_booking', 'jam_mulai', 'jam_selesai', 'status_reservasi'];
+    protected $fillable = ['user_id', 'court_id', 'coach_id', 'tanggal_booking', 'jam_mulai', 'jam_selesai', 'status_reservasi', 'batas_pembayaran'];
+    protected $casts = ['batas_pembayaran' => 'datetime'];
 
     public function user() { return $this->belongsTo(User::class); }
     public function court() { return $this->belongsTo(Court::class); }

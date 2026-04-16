@@ -7,8 +7,10 @@ class Membership extends Model
 {
     use HasFactory;
 
-    // Sesuaikan kolom ini dengan migration membership Anda
-    protected $fillable = ['user_id', 'jenis_membership', 'tanggal_mulai', 'tanggal_berakhir', 'status'];
+    protected $table = 'membership';
+
+    // Membership tracking: poin rewards dan status member
+    protected $fillable = ['user_id', 'total_poin_aktif', 'total_poin_terpakai'];
 
     public function user() { return $this->belongsTo(User::class); }
 }
