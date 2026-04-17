@@ -27,14 +27,14 @@ Route::middleware('auth')->group(function () {
     Route::post('/booking', [BookingController::class, 'store'])->name('booking.store');
     
     // Admin pricing management routes
-    Route::prefix('admin/pricing')->as('admin.pricing.')->group(function () {
+    Route::middleware('admin')->prefix('admin/pricing')->as('admin.pricing.')->group(function () {
         Route::get('/', [\App\Http\Controllers\AdminCourtPricingController::class, 'index'])->name('index');
         Route::get('/courts/{court}/edit', [\App\Http\Controllers\AdminCourtPricingController::class, 'edit'])->name('edit');
         Route::patch('/courts/{court}', [\App\Http\Controllers\AdminCourtPricingController::class, 'update'])->name('update');
     });
 
     // Admin dashboard routes
-    Route::prefix('admin')->as('admin.')->group(function () {
+    Route::middleware('admin')->prefix('admin')->as('admin.')->group(function () {
         Route::get('/dashboard/courts', [AdminDashboardController::class, 'courtManagement'])->name('dashboard.courts');
         Route::patch('/courts/{court}/status', [AdminDashboardController::class, 'updateCourtStatus'])->name('courts.update-status');
         
