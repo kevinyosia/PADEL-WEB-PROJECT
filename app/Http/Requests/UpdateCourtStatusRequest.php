@@ -25,7 +25,7 @@ class UpdateCourtStatusRequest extends FormRequest
             'status' => [
                 'required',
                 'string',
-                Rule::in('available', 'maintenance', 'cleaning'),
+                Rule::in('tersedia', 'maintenance', 'pembersihan'),
             ],
         ];
     }
@@ -37,7 +37,7 @@ class UpdateCourtStatusRequest extends FormRequest
     {
         return [
             'status.required' => 'Status lapangan wajib dipilih',
-            'status.in' => 'Status lapangan harus salah satu dari: Available, Maintenance, atau Cleaning',
+            'status.in' => 'Status lapangan harus salah satu dari: Tersedia, Maintenance, atau Pembersihan',
         ];
     }
 

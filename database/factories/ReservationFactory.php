@@ -34,7 +34,7 @@ class ReservationFactory extends Factory
             'tanggal_booking'  => $tanggal,
             'jam_mulai'        => $jamMulai,
             'jam_selesai'      => $jamSelesai,
-            'status_reservasi' => $this->faker->randomElement(['pending', 'confirmed', 'completed', 'cancelled']),
+            'status_reservasi' => $this->faker->randomElement(['confirmed', 'completed', 'cancelled']),
         ];
     }
 }

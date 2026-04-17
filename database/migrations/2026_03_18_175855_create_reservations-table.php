@@ -26,7 +26,7 @@ return new class extends Migration
         $table->date('tanggal_booking');
         $table->time('jam_mulai');
         $table->time('jam_selesai');
-        $table->enum('status_reservasi', ['pending', 'confirmed', 'completed', 'cancelled'])->default('pending');
+        $table->enum('status_reservasi', ['confirmed', 'completed', 'cancelled'])->default('confirmed');
         $table->timestamps();
     });
     }

@@ -18,7 +18,7 @@ return new class extends Migration
             $table->integer('harga_pagi_tengahmalam');
             $table->integer('harga_malam');
             $table->integer('harga_weekend');
-            $table->enum('status', ['tersedia', 'maintenance'])->default('tersedia');
+            $table->enum('status', ['tersedia', 'maintenance', 'pembersihan'])->default('tersedia');
             $table->timestamps();
         });
     }

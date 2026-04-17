@@ -37,9 +37,9 @@
                     <div class="mb-4">
                         @php
                             $statusColors = [
-                                'available' => 'bg-green-100 text-green-800',
+                                'tersedia' => 'bg-green-100 text-green-800',
                                 'maintenance' => 'bg-red-100 text-red-800',
-                                'cleaning' => 'bg-yellow-100 text-yellow-800',
+                                'pembersihan' => 'bg-yellow-100 text-yellow-800',
                             ];
                             $statusClass = $statusColors[$court['status_lower']] ?? 'bg-gray-100 text-gray-800';
                         @endphp
@@ -80,9 +80,9 @@
                             onchange="this.form.submit()"
                             class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white text-gray-700 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
-                            <option value="available" {{ $court['status_lower'] === 'available' ? 'selected' : '' }}>Status: Available</option>
+                            <option value="tersedia" {{ $court['status_lower'] === 'tersedia' ? 'selected' : '' }}>Status: Tersedia</option>
                             <option value="maintenance" {{ $court['status_lower'] === 'maintenance' ? 'selected' : '' }}>Status: Maintenance</option>
-                            <option value="cleaning" {{ $court['status_lower'] === 'cleaning' ? 'selected' : '' }}>Status: Cleaning</option>
+                            <option value="pembersihan" {{ $court['status_lower'] === 'pembersihan' ? 'selected' : '' }}>Status: Pembersihan</option>
                         </select>
                     </form>
                 </div>
