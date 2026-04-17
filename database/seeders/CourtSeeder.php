@@ -17,7 +17,7 @@ class CourtSeeder extends Seeder
                 'harga_pagi_tengahmalam' => 275000,
                 'harga_malam' => 388000,
                 'harga_weekend' => 300000,
-                'status' => 'Tersedia'
+                'status' => 'tersedia'
             ];
         }
 

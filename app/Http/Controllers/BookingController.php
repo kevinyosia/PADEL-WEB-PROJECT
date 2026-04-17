@@ -11,7 +11,7 @@ use App\Models\Coach;
 use App\Models\Equipment;
 use App\Models\Reservation;
 use App\Models\Transaction;
-use App\Models\PointHistory;
+use Illuminate\Validation\ValidationException;
 
 class BookingController extends Controller
 {
@@ -53,14 +53,11 @@ class BookingController extends Controller
             'tanggal_booking' => ['required', 'date'],
             'jam_mulai' => ['required', 'date_format:H:i'],
             'jam_selesai' => ['required', 'date_format:H:i', 'after:jam_mulai'],
+            'payment_channel' => ['required', 'in:virtual_account,m_banking'],
             'equipment_items' => ['nullable', 'array'],
             'equipment_items.*.equipment_id' => ['required_with:equipment_items', 'exists:equipment,id'],
             'equipment_items.*.jumlah' => ['required_with:equipment_items', 'integer', 'min:1'],
         ]);
-
-        $user = Auth::user();
-        $isMember = $user->membership()->exists();
-        $holdHours = $isMember ? 48 : 8;
 
         $mulai = Carbon::createFromFormat('Y-m-d H:i', $validated['tanggal_booking'].' '.$validated['jam_mulai']);
         $selesai = Carbon::createFromFormat('Y-m-d H:i', $validated['tanggal_booking'].' '.$validated['jam_selesai']);
@@ -69,17 +66,12 @@ class BookingController extends Controller
         $court = Court::findOrFail($validated['court_id']);
         $coach = !empty($validated['coach_id']) ? Coach::findOrFail($validated['coach_id']) : null;
 
-        $isWeekend = in_array($mulai->dayOfWeek, [Carbon::SATURDAY, Carbon::SUNDAY], true);
-        if ($isWeekend) {
-            $hargaLapanganPerJam = $court->harga_weekend;
-        } elseif ($mulai->hour >= 18) {
-            $hargaLapanganPerJam = $court->harga_malam;
-        } else {
-            $hargaLapanganPerJam = $court->harga_pagi_tengahmalam;
-        }
+        $hargaLapanganPerJam = $mulai->hour >= 18
+            ? (int) $court->harga_malam
+            : (int) $court->harga_pagi_tengahmalam;
 
         $totalHargaLapangan = $hargaLapanganPerJam * $durasiJam;
-        $totalHargaCoach = $coach ? ($coach->harga_per_jam * $durasiJam) : 0;
+        $totalHargaCoach = $coach ? ((int) $coach->harga_per_jam * $durasiJam) : 0;
 
         $equipmentItems = $validated['equipment_items'] ?? [];
         $pivotRows = [];
@@ -88,7 +80,7 @@ class BookingController extends Controller
         foreach ($equipmentItems as $item) {
             $equipment = Equipment::findOrFail($item['equipment_id']);
             $jumlah = (int) $item['jumlah'];
-            $subtotal = $equipment->harga * $jumlah;
+            $subtotal = (int) $equipment->harga * $jumlah;
 
             $pivotRows[$equipment->id] = [
                 'jumlah_sewa' => $jumlah,
@@ -100,25 +92,31 @@ class BookingController extends Controller
 
         $grandTotal = $totalHargaLapangan + $totalHargaCoach + $totalHargaPerlengkapan;
 
-        DB::transaction(function () use (
-            $user,
-            $validated,
-            $pivotRows,
-            $totalHargaLapangan,
-            $totalHargaCoach,
-            $totalHargaPerlengkapan,
-            $grandTotal,
-            $holdHours
-        ) {
+        DB::transaction(function () use ($validated, $pivotRows, $totalHargaLapangan, $totalHargaCoach, $totalHargaPerlengkapan, $grandTotal) {
+            $isTaken = Reservation::query()
+                ->where('court_id', $validated['court_id'])
+                ->whereDate('tanggal_booking', $validated['tanggal_booking'])
+                ->whereIn('status_reservasi', ['confirmed', 'completed'])
+                ->where('jam_mulai', '<', $validated['jam_selesai'])
+                ->where('jam_selesai', '>', $validated['jam_mulai'])
+                ->lockForUpdate()
+                ->exists();
+
+            if ($isTaken) {
+                throw ValidationException::withMessages([
+                    'jam_mulai' => 'Slot sudah terisi. Silakan pilih jam lain.',
+                ]);
+            }
+
             $reservation = Reservation::create([
-                'user_id' => $user->id,
+                'user_id' => Auth::id(),
                 'court_id' => $validated['court_id'],
                 'coach_id' => $validated['coach_id'] ?? null,
                 'tanggal_booking' => $validated['tanggal_booking'],
                 'jam_mulai' => $validated['jam_mulai'],
                 'jam_selesai' => $validated['jam_selesai'],
-                'status_reservasi' => 'pending',
-                'batas_pembayaran' => now()->addHours($holdHours),
+                'status_reservasi' => 'confirmed',
+                'batas_pembayaran' => null,
             ]);
 
             if (!empty($pivotRows)) {
@@ -132,100 +130,11 @@ class BookingController extends Controller
                 'total_harga_perlengkapan' => $totalHargaPerlengkapan,
                 'grand_total' => $grandTotal,
                 'metode_pembayaran' => 'transfer',
-                'channel_pembayaran' => null,
-                'status_pembayaran' => 'belum_lunas',
+                'channel_pembayaran' => $validated['payment_channel'],
+                'status_pembayaran' => 'lunas',
             ]);
         });
 
-        return redirect()->route('booking.index')->with('status', 'Reservasi berhasil dibuat. Silakan lanjutkan pembayaran transfer.');
-    }
-
-    public function pay(Request $request, Reservation $reservation)
-    {
-        if ((int) $reservation->user_id !== (int) Auth::id()) {
-            abort(403);
-        }
-
-        if ($reservation->status_reservasi === 'cancelled') {
-            return back()->withErrors(['reservation' => 'Reservasi sudah dibatalkan.']);
-        }
-
-        if ($reservation->batas_pembayaran && now()->greaterThan($reservation->batas_pembayaran)) {
-            $reservation->update(['status_reservasi' => 'cancelled']);
-            $reservation->transaction()?->update(['status_pembayaran' => 'belum_lunas']);
-
-            return back()->withErrors(['reservation' => 'Batas waktu pembayaran sudah lewat, reservasi dibatalkan otomatis.']);
-        }
-
-        $validated = $request->validate([
-            'payment_channel' => ['required', 'in:virtual_account,m_banking'],
-            'use_points' => ['nullable', 'integer', 'min:0'],
-        ]);
-
-        $transaction = $reservation->transaction;
-        if (!$transaction) {
-            return back()->withErrors(['payment' => 'Transaksi reservasi tidak ditemukan.']);
-        }
-
-        $user = Auth::user();
-        $membership = $user->membership;
-        $isMember = (bool) $membership;
-        $pointsToUse = (int) ($validated['use_points'] ?? 0);
-
-        DB::transaction(function () use ($reservation, $transaction, $validated, $isMember, $membership, $pointsToUse) {
-            if ($pointsToUse > 0) {
-                if (!$isMember) {
-                    abort(422, 'Penukaran poin hanya untuk member.');
-                }
-
-                if ($membership->total_poin_aktif < $pointsToUse) {
-                    abort(422, 'Poin aktif tidak mencukupi.');
-                }
-
-                $membership->decrement('total_poin_aktif', $pointsToUse);
-                $membership->increment('total_poin_terpakai', $pointsToUse);
-
-                PointHistory::create([
-                    'user_id' => $reservation->user_id,
-                    'jumlah_poin' => -1 * $pointsToUse,
-                    'keterangan' => 'Pengeluaran poin untuk reservasi #'.$reservation->id,
-                ]);
-
-                $transaction->grand_total = max(0, (int) $transaction->grand_total - $pointsToUse);
-            }
-
-            $transaction->metode_pembayaran = 'transfer';
-            $transaction->channel_pembayaran = $validated['payment_channel'];
-            $transaction->status_pembayaran = 'lunas';
-
-            if ($isMember) {
-                $rentingEquipmentSubtotal = (int) $reservation->equipment()
-                    ->where('equipment.kategori', 'sewa')
-                    ->sum('reservation_equipment.subtotal_harga');
-
-                $buyingEquipmentSubtotal = (int) $reservation->equipment()
-                    ->where('equipment.kategori', 'beli')
-                    ->sum('reservation_equipment.subtotal_harga');
-
-                $cashbackSewa = (int) floor((($transaction->total_harga_lapangan + $rentingEquipmentSubtotal) * 8) / 100);
-                $cashbackBeli = (int) floor(($buyingEquipmentSubtotal * 5) / 100);
-                $cashbackTotal = $cashbackSewa + $cashbackBeli;
-
-                if ($cashbackTotal > 0) {
-                    $membership->increment('total_poin_aktif', $cashbackTotal);
-
-                    PointHistory::create([
-                        'user_id' => $reservation->user_id,
-                        'jumlah_poin' => $cashbackTotal,
-                        'keterangan' => 'Pemasukan cashback poin reservasi #'.$reservation->id,
-                    ]);
-                }
-            }
-
-            $transaction->save();
-            $reservation->update(['status_reservasi' => 'confirmed']);
-        });
-
-        return redirect()->route('booking.index')->with('status', 'Pembayaran transfer berhasil diproses.');
+        return redirect()->route('booking.index')->with('status', 'Reservasi dan pembayaran berhasil diproses.');
     }
 }
