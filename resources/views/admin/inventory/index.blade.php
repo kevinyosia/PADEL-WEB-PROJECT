@@ -1,9 +1,8 @@
-@extends('layouts.app')
+@extends('layouts.admin')
 
 @section('content')
-<div class="py-12">
-    <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-        <!-- Header Section -->
+<div style="max-width: 1280px; margin: 0 auto;">
+    <!-- Header Section -->
         <div class="flex justify-between items-center mb-8">
             <div>
                 <h1 class="text-3xl font-bold text-gray-900">Inventory & Rentals</h1>
@@ -181,5 +180,4 @@
             @endif
         </div>
     </div>
-</div>
 @endsection

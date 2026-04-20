@@ -15,9 +15,9 @@ use Illuminate\Validation\ValidationException;
 
 class BookingController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        
+        // Time slots untuk picker (6:00 - 23:00)
         $timeSlots = [];
         $start = Carbon::createFromTime(6, 0); 
         $end = Carbon::createFromTime(0, 0)->addDay();
@@ -27,22 +27,51 @@ class BookingController extends Controller
             $start->addHour();
         }
 
-        
         if (!in_array('00:00', $timeSlots) && !in_array('24:00', $timeSlots)) {
             $timeSlots[] = '00:00';
         }
 
-        
+        // Get all data
         $courts = Court::where('status', 'tersedia')->get();
-        
-        
-        $coaches = Coach::all();
-        
-       
-        $equipments = Equipment::all();
+        $coaches = Coach::where('availability_status', '<>', 'deleted')->get();
+        $equipments = Equipment::where('kategori', 'sewa')->get();
 
-        
-        return view('booking.index', compact('timeSlots', 'courts', 'coaches', 'equipments'));
+        // Parse query parameters dari courts page
+        $courtId = $request->query('court_id');
+        $jamMulai = $request->query('jam_mulai', '08:00');
+        $jamSelesai = $request->query('jam_selesai', '09:00');
+        $tanggal = $request->query('tanggal_booking', now()->toDateString());
+
+        $court = $courtId ? Court::find($courtId) : null;
+
+        // Hitung durasi & harga
+        $durasiJam = 1;
+        $courtPrice = 0;
+        $courtName = $court?->nama_lapangan ?? 'Bandeja Padel Arena';
+        $tanggalFormatted = '';
+
+        if ($court && $jamMulai && $jamSelesai) {
+            $mulai = Carbon::createFromFormat('H:i', $jamMulai);
+            $selesai = Carbon::createFromFormat('H:i', $jamSelesai);
+            if ($selesai <= $mulai) {
+                $selesai->addDay();
+            }
+            $durasiJam = max(1, $selesai->diffInHours($mulai));
+            $courtPrice = ($mulai->hour >= 18 ? (int)$court->harga_malam : (int)$court->harga_pagi_tengahmalam) * $durasiJam;
+        }
+
+        if ($tanggal) {
+            $dt = Carbon::parse($tanggal);
+            $days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+            $mons = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+            $tanggalFormatted = $days[$dt->dayOfWeek] . ', ' . $dt->day . ' ' . $mons[$dt->month - 1] . ' ' . $dt->year;
+        }
+
+        return view('booking.index', compact(
+            'timeSlots', 'courts', 'coaches', 'equipments',
+            'court', 'courtName', 'courtPrice', 'durasiJam', 'tanggalFormatted',
+            'jamMulai', 'jamSelesai', 'tanggal'
+        ));
     }
 
     public function store(Request $request)
