@@ -67,7 +67,7 @@ class BookingController extends Controller
             $tanggalFormatted = $days[$dt->dayOfWeek] . ', ' . $dt->day . ' ' . $mons[$dt->month - 1] . ' ' . $dt->year;
         }
 
-        return view('booking.index', compact(
+        return view('user.booking.index', compact(
             'timeSlots', 'courts', 'coaches', 'equipments',
             'court', 'courtName', 'courtPrice', 'durasiJam', 'tanggalFormatted',
             'jamMulai', 'jamSelesai', 'tanggal'

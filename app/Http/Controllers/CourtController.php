@@ -12,8 +12,8 @@ class CourtController extends Controller
 {
     public function index()
     {
-        // Akan mengarahkan ke file views/courts/index.blade.php
-        return view('courts.index');
+        // Akan mengarahkan ke file views/user/courts/index.blade.php
+        return view('user.courts.index');
     }
 
     public function availability(Request $request): JsonResponse

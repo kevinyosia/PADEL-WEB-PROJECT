@@ -8,6 +8,9 @@ use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminInventoryController;
 use App\Http\Controllers\AdminCoachController;
 use App\Http\Controllers\AdminLoginController;
+use App\Http\Controllers\ManagerLoginController;
+use App\Http\Controllers\ManagerDashboardController;
+use App\Http\Controllers\ManagerReviewsController;
 use App\Http\Controllers\CoachesPageController;
 use App\Http\Controllers\ProShopController;
 use App\Http\Controllers\MembershipController;
@@ -16,6 +19,21 @@ use App\Http\Controllers\SettingsController;
 
 Route::get('/', function () {
     return view('welcome');
+});
+
+// ── Manager Login Routes (MUST be outside auth middleware) ──
+Route::prefix('manager')->name('manager.')->group(function () {
+    Route::get('/login', [ManagerLoginController::class, 'showLoginForm'])
+        ->middleware('guest')
+        ->name('login');
+    
+    Route::post('/login', [ManagerLoginController::class, 'login'])
+        ->middleware('guest')
+        ->name('login.submit');
+    
+    Route::post('/logout', [ManagerLoginController::class, 'logout'])
+        ->middleware('auth')
+        ->name('logout');
 });
 
 // ── Admin Login Routes (MUST be outside auth middleware) ──
@@ -62,6 +80,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [\App\Http\Controllers\AdminCourtPricingController::class, 'index'])->name('index');
         Route::get('/courts/{court}/edit', [\App\Http\Controllers\AdminCourtPricingController::class, 'edit'])->name('edit');
         Route::patch('/courts/{court}', [\App\Http\Controllers\AdminCourtPricingController::class, 'update'])->name('update');
+    });
+
+    // Manager dashboard routes
+    Route::middleware('manager')->prefix('manager')->as('manager.')->group(function () {
+        Route::get('/dashboard', [ManagerDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/reviews', [ManagerReviewsController::class, 'index'])->name('reviews');
     });
 
     // Admin dashboard routes
