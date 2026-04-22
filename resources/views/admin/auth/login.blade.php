@@ -298,7 +298,7 @@
 
             {{-- Info Box --}}
             <div class="info-box">
-                <strong>Demo Account:</strong>
+                <strong>Demo Account:</strong><br>
                 Email: 123@admin.local<br>
                 Password: 321
             </div>

@@ -159,12 +159,6 @@
                     @endif
                 </div>
             </div>
-
-            <button
-                class="book-btn {{ $status !== 'active' ? 'inactive' : '' }}"
-                onclick="{{ $status === 'active' ? "window.location.href='".route('courts.index')."?coach_id=".$coach->id."'" : 'void(0)' }}"
-                {{ $status !== 'active' ? 'disabled' : '' }}
-            >Pilih Jadwal</button>
         </div>
         @empty
         <div class="empty-state">

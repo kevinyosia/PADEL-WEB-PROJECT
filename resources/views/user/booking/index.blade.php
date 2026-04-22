@@ -205,9 +205,7 @@
 @section('content')
 <div class="booking-wrap">
     <a href="{{ route('courts.index') }}" class="booking-back">← Kembali ke Pilih Lapangan</a>
-    <div class="booking-title">Produk Tambahan</div>
-
-    {{-- Court summary --}}
+        <div class="booking-title">Pro Shops</div>
     <div class="summary-card">
         <div class="summary-court-img">🏸</div>
         <div>
@@ -284,6 +282,35 @@
         </div>
     </div>
 
+    {{-- ── PRODUCTS accordion ── --}}
+    <div class="addon-section">
+        <div class="accordion-header" id="accProductHeader" onclick="toggleAcc('product')">
+            <div class="acc-left">
+                <div class="acc-icon cream">⚽</div>
+                <div class="acc-title">Pro Shops</div>
+            </div>
+            <span class="acc-chevron" id="accProductChevron">▼</span>
+        </div>
+        <div class="accordion-body" id="accProductBody">
+            @forelse($products as $prod)
+            <div class="equip-row">
+                <div class="equip-icon">⚽</div>
+                <div>
+                    <div class="equip-name">{{ $prod->nama_alat }}</div>
+                    <div class="equip-price"><strong>Rp{{ number_format($prod->harga,0,',','.') }}</strong>/item</div>
+                </div>
+                <div class="qty-wrap">
+                    <button class="qty-btn" onclick="changeProductQty({{ $prod->id }}, {{ $prod->harga }}, -1)">−</button>
+                    <span class="qty-val" id="prod{{ $prod->id }}">0</span>
+                    <button class="qty-btn" onclick="changeProductQty({{ $prod->id }}, {{ $prod->harga }}, 1)">+</button>
+                </div>
+            </div>
+            @empty
+            <div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px;">Tidak ada produk tersedia.</div>
+            @endforelse
+        </div>
+    </div>
+
     {{-- Payment Channel --}}
     <div class="payment-section" style="margin-top:20px;">
         <div class="payment-title">Metode Pembayaran</div>
@@ -316,6 +343,7 @@
             <div class="modal-line"><span>Sewa Lapangan</span><span id="mCourtPrice">Rp{{ number_format($courtPrice ?? 0,0,',','.') }}</span></div>
             <div class="modal-line" id="mCoachLine" style="display:none;"><span>Coach</span><span id="mCoachPrice">—</span></div>
             <div class="modal-line" id="mEquipLine" style="display:none;"><span>Perlengkapan</span><span id="mEquipPrice">—</span></div>
+            <div class="modal-line" id="mProductLine" style="display:none;"><span>Pro Shops</span><span id="mProductPrice">—</span></div>
             <div class="modal-line total"><span>Total Bayar</span><span id="mTotal">Rp{{ number_format($courtPrice ?? 0,0,',','.') }}</span></div>
         </div>
         <div class="modal-actions">
@@ -345,15 +373,19 @@ const DURASI_JAM   = {{ $durasiJam ?? 1 }};
 let selectedCoach  = null;
 let coachPrice     = 0;
 let equipmentQtys  = {};   // { id: { qty, price } }
+let productQtys    = {};   // { id: { qty, price } }
 let paymentChannel = 'virtual_account';
 
 function fmtRp(n) { return Number(n).toLocaleString('id-ID'); }
 
 // ── Accordion ──
 function toggleAcc(key) {
-    const body    = document.getElementById(`acc${key==='coach'?'Coach':'Equip'}Body`);
-    const header  = document.getElementById(`acc${key==='coach'?'Coach':'Equip'}Header`);
-    const chevron = document.getElementById(`acc${key==='coach'?'Coach':'Equip'}Chevron`);
+    let section = 'Coach';
+    if (key === 'equip') section = 'Equip';
+    else if (key === 'product') section = 'Product';
+    const body    = document.getElementById(`acc${section}Body`);
+    const header  = document.getElementById(`acc${section}Header`);
+    const chevron = document.getElementById(`acc${section}Chevron`);
     const isOpen  = body.classList.contains('open');
     body.classList.toggle('open', !isOpen);
     header.classList.toggle('open', !isOpen);
@@ -388,6 +420,14 @@ function changeQty(id, price, delta) {
     updateTotal();
 }
 
+// ── Products ──
+function changeProductQty(id, price, delta) {
+    if (!productQtys[id]) productQtys[id] = { qty: 0, price };
+    productQtys[id].qty = Math.max(0, productQtys[id].qty + delta);
+    document.getElementById(`prod${id}`).textContent = productQtys[id].qty;
+    updateTotal();
+}
+
 // ── Payment ──
 function selectPayment(val) {
     paymentChannel = val;
@@ -399,7 +439,10 @@ function selectPayment(val) {
 function equipTotal() {
     return Object.values(equipmentQtys).reduce((s,e) => s + (e.qty * e.price), 0);
 }
-function grandTotal() { return COURT_PRICE + coachPrice + equipTotal(); }
+function productTotal() {
+    return Object.values(productQtys).reduce((s,e) => s + (e.qty * e.price), 0);
+}
+function grandTotal() { return COURT_PRICE + coachPrice + equipTotal() + productTotal(); }
 
 function updateTotal() {
     document.getElementById('totalDisplay').textContent = 'Rp' + fmtRp(grandTotal());
@@ -408,6 +451,7 @@ function updateTotal() {
 // ── Confirm modal ──
 function openConfirm() {
     const et = equipTotal();
+    const pt = productTotal();
     document.getElementById('mCourtPrice').textContent = 'Rp' + fmtRp(COURT_PRICE);
     if (coachPrice > 0) {
         document.getElementById('mCoachLine').style.display = '';
@@ -420,6 +464,12 @@ function openConfirm() {
         document.getElementById('mEquipPrice').textContent  = 'Rp' + fmtRp(et);
     } else {
         document.getElementById('mEquipLine').style.display = 'none';
+    }
+    if (pt > 0) {
+        document.getElementById('mProductLine').style.display = '';
+        document.getElementById('mProductPrice').textContent  = 'Rp' + fmtRp(pt);
+    } else {
+        document.getElementById('mProductLine').style.display = 'none';
     }
     document.getElementById('mTotal').textContent = 'Rp' + fmtRp(grandTotal());
     document.getElementById('confirmModal').classList.add('show');
@@ -439,6 +489,15 @@ function submitBooking() {
             equipWrap.innerHTML += `<input type="hidden" name="equipment_items[${idx}][equipment_id]" value="${id}">`;
             equipWrap.innerHTML += `<input type="hidden" name="equipment_items[${idx}][jumlah]" value="${qty}">`;
             idx++;
+        }
+    });
+    
+    let pidx = 0;
+    Object.entries(productQtys).forEach(([id, {qty}]) => {
+        if (qty > 0) {
+            equipWrap.innerHTML += `<input type="hidden" name="product_items[${pidx}][product_id]" value="${id}">`;
+            equipWrap.innerHTML += `<input type="hidden" name="product_items[${pidx}][jumlah]" value="${qty}">`;
+            pidx++;
         }
     });
     document.getElementById('finalForm').submit();

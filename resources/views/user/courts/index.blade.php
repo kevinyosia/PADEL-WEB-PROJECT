@@ -66,37 +66,13 @@
         border: 1px solid rgba(0,0,0,0.06);
     }
     .floor-plan-svg {
-        width: 100%; height: 220px;
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        grid-template-rows: repeat(2, 1fr);
-        gap: 8px;
-        padding: 4px;
+        width: 100%;
+        height: auto;
+        display: block;
+        border-radius: 8px;
     }
     .court-tile {
-        background: var(--green-mid);
-        border-radius: 8px; position: relative;
-        cursor: pointer; transition: all 0.18s;
-        border: 2px solid transparent;
-        display: flex; align-items: flex-end; padding: 5px 6px;
-        overflow: hidden;
-    }
-    .court-tile::before {
-        content: ''; position: absolute; inset: 0;
-        background: repeating-linear-gradient(
-            0deg, transparent, transparent 8px,
-            rgba(255,255,255,0.07) 8px, rgba(255,255,255,0.07) 9px
-        );
-    }
-    .court-tile.maintenance { background: #7A7A6A; }
-    .court-tile.selected { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold); }
-    .court-tile:hover:not(.maintenance) { transform: scale(1.03); }
-    .court-tile-label {
-        background: rgba(0,0,0,0.55);
-        color: #fff; font-size: 9px; font-weight: 700;
-        padding: 2px 5px; border-radius: 4px;
-        text-transform: uppercase; letter-spacing: 0.05em;
-        position: relative; z-index: 1;
+        display: none;
     }
 
     /* Choose courts panel */
@@ -291,10 +267,8 @@
 
             {{-- Floor Plan --}}
             <div class="floor-plan-wrap">
-                <div class="floor-plan-svg" id="floorPlan">
-                    {{-- Rendered by JS once courts load --}}
-                    <div style="grid-column:1/-1;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:12px;">Memuat denah lapangan...</div>
-                </div>
+                <img src="{{ asset('images/Denah Lapangan Padel.png') }}" alt="Denah Lapangan Padel" class="floor-plan-svg" style="margin-bottom: 16px;">
+                <div id="floorPlan" style="display: none;"></div>
             </div>
 
             {{-- Choose Courts Panel --}}

@@ -8,9 +8,6 @@
             <h1 class="text-3xl font-bold text-[#0f172a]">Dashboard Manajemen</h1>
             <p class="text-sm text-gray-500 mt-2">Metrik performa operasional Arena</p>
         </div>
-        <button class="px-4 py-2 bg-[#2d4533] text-white rounded-lg text-sm font-semibold hover:bg-[#1a2620] transition-colors">
-            📊 Export Report
-        </button>
     </div>
 
     {{-- ─── Metrics Cards ─── --}}

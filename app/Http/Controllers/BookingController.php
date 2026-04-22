@@ -35,6 +35,7 @@ class BookingController extends Controller
         $courts = Court::where('status', 'tersedia')->get();
         $coaches = Coach::where('availability_status', '<>', 'deleted')->get();
         $equipments = Equipment::where('kategori', 'sewa')->get();
+        $products = Equipment::where('kategori', 'beli')->get();
 
         // Parse query parameters dari courts page
         $courtId = $request->query('court_id');
@@ -68,7 +69,7 @@ class BookingController extends Controller
         }
 
         return view('user.booking.index', compact(
-            'timeSlots', 'courts', 'coaches', 'equipments',
+            'timeSlots', 'courts', 'coaches', 'equipments', 'products',
             'court', 'courtName', 'courtPrice', 'durasiJam', 'tanggalFormatted',
             'jamMulai', 'jamSelesai', 'tanggal'
         ));
@@ -86,6 +87,9 @@ class BookingController extends Controller
             'equipment_items' => ['nullable', 'array'],
             'equipment_items.*.equipment_id' => ['required_with:equipment_items', 'exists:equipment,id'],
             'equipment_items.*.jumlah' => ['required_with:equipment_items', 'integer', 'min:1'],
+            'product_items' => ['nullable', 'array'],
+            'product_items.*.product_id' => ['required_with:product_items', 'exists:equipment,id'],
+            'product_items.*.jumlah' => ['required_with:product_items', 'integer', 'min:1'],
         ]);
 
         $mulai = Carbon::createFromFormat('Y-m-d H:i', $validated['tanggal_booking'].' '.$validated['jam_mulai']);
@@ -103,8 +107,10 @@ class BookingController extends Controller
         $totalHargaCoach = $coach ? ((int) $coach->harga_per_jam * $durasiJam) : 0;
 
         $equipmentItems = $validated['equipment_items'] ?? [];
+        $productItems = $validated['product_items'] ?? [];
         $pivotRows = [];
         $totalHargaPerlengkapan = 0;
+        $totalHargaProduk = 0;
 
         foreach ($equipmentItems as $item) {
             $equipment = Equipment::findOrFail($item['equipment_id']);
@@ -119,9 +125,22 @@ class BookingController extends Controller
             $totalHargaPerlengkapan += $subtotal;
         }
 
-        $grandTotal = $totalHargaLapangan + $totalHargaCoach + $totalHargaPerlengkapan;
+        foreach ($productItems as $item) {
+            $product = Equipment::findOrFail($item['product_id']);
+            $jumlah = (int) $item['jumlah'];
+            $subtotal = (int) $product->harga * $jumlah;
 
-        DB::transaction(function () use ($validated, $pivotRows, $totalHargaLapangan, $totalHargaCoach, $totalHargaPerlengkapan, $grandTotal) {
+            $pivotRows[$product->id] = [
+                'jumlah_sewa' => $jumlah,
+                'subtotal_harga' => $subtotal,
+            ];
+
+            $totalHargaProduk += $subtotal;
+        }
+
+        $grandTotal = $totalHargaLapangan + $totalHargaCoach + $totalHargaPerlengkapan + $totalHargaProduk;
+
+        DB::transaction(function () use ($validated, $pivotRows, $totalHargaLapangan, $totalHargaCoach, $totalHargaPerlengkapan, $totalHargaProduk, $grandTotal) {
             $isTaken = Reservation::query()
                 ->where('court_id', $validated['court_id'])
                 ->whereDate('tanggal_booking', $validated['tanggal_booking'])
@@ -156,7 +175,7 @@ class BookingController extends Controller
                 'reservation_id' => $reservation->id,
                 'total_harga_lapangan' => $totalHargaLapangan,
                 'total_harga_coach' => $totalHargaCoach,
-                'total_harga_perlengkapan' => $totalHargaPerlengkapan,
+                'total_harga_perlengkapan' => $totalHargaPerlengkapan + $totalHargaProduk,
                 'grand_total' => $grandTotal,
                 'metode_pembayaran' => 'transfer',
                 'channel_pembayaran' => $validated['payment_channel'],

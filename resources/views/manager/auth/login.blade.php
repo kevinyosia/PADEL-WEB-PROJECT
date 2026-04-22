@@ -54,6 +54,15 @@
                 <div class="mt-6 text-center text-sm font-semibold">
                     Portal Manajemen Bandeja Padel Arena © 2026
                 </div>
+
+                {{-- Demo Account --}}
+                <div style="background: #f0f7f4; border: 1px solid #c2deb0; border-radius: 12px; padding: 14px; margin-top: 20px; font-size: 11px;">
+                    <div style="font-weight: 700; color: #2d4a29; margin-bottom: 8px;">📋 Demo Account:</div>
+                    <div style="color: #3a3a2c; line-height: 1.8;">
+                        Email: manager@bandeja.local<br>
+                        Password: manager123
+                    </div>
+                </div>
             </div>
         </div>
 

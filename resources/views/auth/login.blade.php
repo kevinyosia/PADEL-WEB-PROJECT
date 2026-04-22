@@ -54,6 +54,19 @@
                 <div class="mt-6 text-center text-sm font-semibold">
                     Don't have an account? <a href="{{ route('register') }}" class="text-[#4F6E55] underline">SIGN UP</a>
                 </div>
+
+                {{-- Demo Accounts --}}
+                <div style="background: #f0f7f4; border: 1px solid #c2deb0; border-radius: 12px; padding: 14px; margin-top: 20px; font-size: 11px;">
+                    <div style="font-weight: 700; color: #2d4a29; margin-bottom: 8px;">📋 Demo Accounts:</div>
+                    <div style="color: #3a3a2c; line-height: 1.8;">
+                        <strong>Regular User:</strong><br>
+                        Email: customer@example.com<br>
+                        Password: password<br><br>
+                        <strong>Member (with Rewards):</strong><br>
+                        Email: member@bandeja.com<br>
+                        Password: member123
+                    </div>
+                </div>
             </div>
         </div>
 
