@@ -14,7 +14,7 @@
     </div>
 
     {{-- ─── Metrics Cards ─── --}}
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
         {{-- Total Bookings Card --}}
         <div class="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
             <div class="flex justify-between items-start mb-4">
@@ -37,7 +37,7 @@
                 </span>
             </div>
             <p class="text-gray-500 text-xs font-semibold uppercase mb-2">Ball Sales</p>
-            <p class="text-3xl font-bold text-[#0f172a]">${{ number_format($ballSales, 0) }}</p>
+            <p class="text-3xl font-bold text-[#0f172a]">Rp{{ number_format($ballSales, 0) }}</p>
             <p class="text-xs text-gray-400 mt-3">Inventory: Tinggi</p>
         </div>
 
@@ -52,6 +52,19 @@
             <p class="text-gray-500 text-xs font-semibold uppercase mb-2">Racket Rentals</p>
             <p class="text-3xl font-bold text-[#0f172a]">{{ number_format($racketRentals) }}</p>
             <p class="text-xs text-gray-400 mt-3">4 damaged, 12 repair</p>
+        </div>
+
+        {{-- New Members Card --}}
+        <div class="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+            <div class="flex justify-between items-start mb-4">
+                <span class="text-3xl">👤</span>
+                <span class="text-xs font-bold px-2 py-1 rounded bg-blue-100 text-blue-700">
+                    +{{ $newMembers }}
+                </span>
+            </div>
+            <p class="text-gray-500 text-xs font-semibold uppercase mb-2">New Members</p>
+            <p class="text-3xl font-bold text-[#0f172a]">{{ number_format($newMembers) }}</p>
+            <p class="text-xs text-gray-400 mt-3">Signed up from yesterday</p>
         </div>
     </div>
 
@@ -102,7 +115,7 @@
                             {{ $activity['time'] }}
                         </p>
                     </div>
-                    <p class="font-bold text-sm text-[#0f172a]">${{ number_format($activity['amount'], 0) }}</p>
+                    <p class="font-bold text-sm text-[#0f172a]">Rp{{ number_format($activity['amount'], 0) }}</p>
                 </div>
                 @empty
                 <p class="text-xs text-gray-500 text-center py-6">Belum ada aktivitas</p>

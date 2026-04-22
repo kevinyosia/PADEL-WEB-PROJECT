@@ -22,7 +22,16 @@ class CourtSeeder extends Seeder
         }
 
         foreach ($courts as $court) {
-            Court::create($court);
+            Court::updateOrCreate(
+                ['nama_lapangan' => $court['nama_lapangan']],
+                [
+                    'deskripsi' => $court['deskripsi'],
+                    'harga_pagi_tengahmalam' => $court['harga_pagi_tengahmalam'],
+                    'harga_malam' => $court['harga_malam'],
+                    'harga_weekend' => $court['harga_weekend'],
+                    'status' => $court['status'],
+                ]
+            );
         }
     }
 }

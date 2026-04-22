@@ -175,9 +175,53 @@
             flex-shrink: 0;
             font-size: 14px;
         }
+
+        .nav-buttons {
+            position: fixed;
+            bottom: 32px;
+            left: 32px;
+            display: flex;
+            gap: 12px;
+            z-index: 50;
+        }
+
+        .nav-btn {
+            padding: 10px 16px;
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            border-radius: 9999px;
+            font-size: 13px;
+            font-weight: 600;
+            font-family: 'Figtree', sans-serif;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.15s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-btn:hover {
+            background: #1d4ed8;
+            box-shadow: 0 6px 12px rgba(37, 99, 235, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .nav-btn.secondary {
+            background: #8b5cf6;
+        }
+
+        .nav-btn.secondary:hover {
+            background: #7c3aed;
+        }
     </style>
 </head>
 <body>
+    {{-- Bottom Left Navigation Buttons --}}
+    <div class="nav-buttons">
+        <a href="{{ route('login') }}" class="nav-btn">User Login</a>
+        <a href="{{ route('manager.login') }}" class="nav-btn secondary">Manager Login</a>
+    </div>
+
     <div class="login-container">
         <div class="login-card">
             {{-- Header --}}

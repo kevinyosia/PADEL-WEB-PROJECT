@@ -22,7 +22,7 @@ Route::get('/', function () {
 });
 
 // ── Manager Login Routes (MUST be outside auth middleware) ──
-Route::prefix('manager')->name('manager.')->group(function () {
+Route::prefix('manajemen')->name('manager.')->group(function () {
     Route::get('/login', [ManagerLoginController::class, 'showLoginForm'])
         ->middleware('guest')
         ->name('login');
@@ -83,7 +83,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // Manager dashboard routes
-    Route::middleware('manager')->prefix('manager')->as('manager.')->group(function () {
+    Route::middleware('manager')->prefix('manajemen')->as('manager.')->group(function () {
         Route::get('/dashboard', [ManagerDashboardController::class, 'index'])->name('dashboard');
         Route::get('/reviews', [ManagerReviewsController::class, 'index'])->name('reviews');
     });

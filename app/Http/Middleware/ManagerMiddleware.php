@@ -16,19 +16,12 @@ class ManagerMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // Cek apakah user sudah login
-        if (!Auth::check()) {
-            return redirect()->route('manager.login');
+        // Middleware ini digunakan di dalam Route::middleware('auth') group
+        // Jadi user pasti sudah login. Tinggal cek role-nya
+        if (auth()->check() && auth()->user()->role === 'manajemen') {
+            return $next($request);
         }
 
-        // Cek apakah user memiliki role 'manajemen'
-        if (Auth::user()->role !== 'manajemen') {
-            Auth::logout();
-            return redirect()->route('manager.login')->withErrors([
-                'email' => 'Anda tidak memiliki akses ke halaman ini.'
-            ]);
-        }
-
-        return $next($request);
+        abort(403, 'Akses Ditolak. Anda tidak memiliki izin untuk mengakses halaman ini.');
     }
 }

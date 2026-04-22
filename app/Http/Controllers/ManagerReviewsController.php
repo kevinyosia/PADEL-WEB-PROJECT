@@ -26,35 +26,33 @@ class ManagerReviewsController extends Controller
 
         // Search by user name atau review comment
         if ($searchQuery) {
-            $query->whereHas('user', function ($q) use ($searchQuery) {
-                $q->where('name', 'like', '%' . $searchQuery . '%');
-            })->orWhere('komentar_review', 'like', '%' . $searchQuery . '%');
+            $query->where(function ($q) use ($searchQuery) {
+                $q->whereHas('user', function ($subQuery) use ($searchQuery) {
+                    $subQuery->where('name', 'like', '%' . $searchQuery . '%');
+                })
+                ->orWhere('komentar_review', 'like', '%' . $searchQuery . '%');
+            });
         }
 
         // Paginate reviews
         $reviews = $query->latest('created_at')->paginate(10);
 
         // Arena Sentiment - rata-rata rating per kategori feedback
-        // Berdasarkan feedback table dengan rating tunggal (bukan 4 star inputs)
-        $allFeedbacks = Feedback::all();
-        
-        // Calculate average for each category
-        // Untuk sekarang, kita hitung dari rating tunggal yang tersimpan
-        $arenaRating = round($allFeedbacks->avg('rating'), 1);
+        // Gunakan query aggregation instead of loading all records untuk performa lebih baik
+        $allFeedbacksCount = Feedback::count();
+        $arenaRating = round(Feedback::avg('rating') ?? 0, 1);
 
-        // Untuk detail breakdown, kita bisa gunakan CoachReview untuk mendapat detail
-        // Tapi Feedback hanya punya single rating field
-        // Jadi kita calculate dari semua feedback
-        $courtCondition = round($allFeedbacks->avg('rating'), 1);
-        $staffCommunication = round($allFeedbacks->avg('rating'), 1);
-        $facilityCleanless = round($allFeedbacks->avg('rating'), 1);
-        $overallExperience = round($allFeedbacks->avg('rating'), 1);
+        // Untuk detail breakdown, kita hitung dari rating tunggal yang tersimpan
+        $courtCondition = round(Feedback::avg('rating') ?? 0, 1);
+        $staffCommunication = round(Feedback::avg('rating') ?? 0, 1);
+        $facilityCleanless = round(Feedback::avg('rating') ?? 0, 1);
+        $overallExperience = round(Feedback::avg('rating') ?? 0, 1);
 
         // Review Analytics
         $totalReviewsThisMonth = Feedback::where('created_at', '>=', now()->startOfMonth())->count();
-        $positiveSentimentPercent = round(
-            (Feedback::where('rating', '>=', 4)->count() / max($allFeedbacks->count(), 1)) * 100
-        );
+        $positiveSentimentPercent = $allFeedbacksCount > 0 
+            ? round((Feedback::where('rating', '>=', 4)->count() / $allFeedbacksCount) * 100)
+            : 0;
 
         return view('manager.reviews', compact(
             'reviews',

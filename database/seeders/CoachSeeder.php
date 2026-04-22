@@ -45,18 +45,25 @@ class CoachSeeder extends Seeder
         ];
 
         foreach ($coaches as $index => $coachData) {
-            $user = User::create([
-                'name'     => $coachData['nama'],
-                'email'    => 'coach' . ($index + 1) . '@sistem.local', 
-                'phone'    => '-', 
-                'password' => Hash::make('rahasia123'),
-                'role'     => 'coach',
-            ]);
-            Coach::create([
-                'user_id'            => $user->id,
-                'deskripsi_keahlian' => $coachData['deskripsi'],
-                'harga_per_jam'      => $coachData['harga'],
-            ]);
+            $email = 'coach' . ($index + 1) . '@sistem.local';
+            
+            $user = User::updateOrCreate(
+                ['email' => $email],
+                [
+                    'name'     => $coachData['nama'],
+                    'phone'    => '-',
+                    'password' => Hash::make('rahasia123'),
+                    'role'     => 'coach',
+                ]
+            );
+            
+            Coach::updateOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'deskripsi_keahlian' => $coachData['deskripsi'],
+                    'harga_per_jam'      => $coachData['harga'],
+                ]
+            );
         }
     }
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Reservation;
 use App\Models\Equipment;
 use App\Models\Transaction;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Carbon\Carbon;
@@ -136,16 +137,24 @@ class ManagerDashboardController extends Controller
         }
 
         // Recent Activity - last 5 bookings yang sudah lunas
-        $recentActivity = Transaction::whereHas('reservation', function ($query) {
-            $query->with('user', 'court');
-        })
+        $recentActivity = Transaction::with(['reservation' => function ($query) {
+            $query->with(['user', 'court']);
+        }])
         ->where('status_pembayaran', 'lunas')
         ->latest('created_at')
         ->take(5)
         ->get()
         ->map(function ($transaction) {
+            // Hitung durasi dari jam_mulai dan jam_selesai
+            $mulai = \Carbon\Carbon::createFromFormat('H:i:s', $transaction->reservation->jam_mulai ?? '00:00:00');
+            $selesai = \Carbon\Carbon::createFromFormat('H:i:s', $transaction->reservation->jam_selesai ?? '01:00:00');
+            if ($selesai <= $mulai) {
+                $selesai->addDay();
+            }
+            $durasiJam = max(1, $selesai->diffInHours($mulai));
+            
             return [
-                'activity' => $transaction->reservation->court->nama_lapangan . ' Booking (' . $transaction->reservation->durasi_jam . 'h)',
+                'activity' => $transaction->reservation->court->nama_lapangan . ' Booking (' . $durasiJam . 'h)',
                 'category' => 'Booking',
                 'time' => $transaction->created_at->diffForHumans(),
                 'amount' => $transaction->grand_total,
@@ -172,6 +181,12 @@ class ManagerDashboardController extends Controller
 
         $peakHourDisplay = $peakHour ? $peakHour->jam_mulai . ':00' : 'N/A';
 
+        // New Members - Users yang sign up kemarin (dari role 'customer')
+        $yesterday = Carbon::now()->subDay()->startOfDay();
+        $newMembers = User::where('role', 'customer')
+            ->where('created_at', '>=', $yesterday)
+            ->count();
+
         return view('manager.dashboard', compact(
             'totalBookings',
             'ballSales',
@@ -183,7 +198,8 @@ class ManagerDashboardController extends Controller
             'bookingCounts',
             'recentActivity',
             'courtOccupancy',
-            'peakHourDisplay'
+            'peakHourDisplay',
+            'newMembers'
         ));
     }
 }

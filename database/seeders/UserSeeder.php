@@ -15,23 +15,39 @@ class UserSeeder extends Seeder
     public function run(): void
     {
         // Create admin account
-        User::create([
-            'name' => 'Messi',
-            'email' => '123@admin.local',
-            'phone' => null,
-            'password' => Hash::make('321'),
-            'role' => 'admin',
-            'email_verified_at' => now(),
-        ]);
+        User::updateOrCreate(
+            ['email' => '123@admin.local'],
+            [
+                'name' => 'Messi',
+                'phone' => null,
+                'password' => Hash::make('321'),
+                'role' => 'admin',
+                'email_verified_at' => now(),
+            ]
+        );
 
         // Create sample customer account (optional)
-        User::create([
-            'name' => 'kevin',
-            'email' => 'customer@example.com',
-            'phone' => '08123456789',
-            'password' => Hash::make('password'),
-            'role' => 'customer',
-            'email_verified_at' => now(),
-        ]);
+        User::updateOrCreate(
+            ['email' => 'customer@example.com'],
+            [
+                'name' => 'kevin',
+                'phone' => '08123456789',
+                'password' => Hash::make('password'),
+                'role' => 'customer',
+                'email_verified_at' => now(),
+            ]
+        );
+
+        // Create manager account
+        User::updateOrCreate(
+            ['email' => 'manager@bandeja.local'],
+            [
+                'name' => 'Manager Bandeja',
+                'phone' => null,
+                'password' => Hash::make('manager123'),
+                'role' => 'manajemen',
+                'email_verified_at' => now(),
+            ]
+        );
     }
 }

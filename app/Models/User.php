@@ -58,15 +58,15 @@ class User extends Authenticatable
     {
         return $this->hasOne(Membership::class);
     }
-    public function PointHistories()//satu user bisa memiliki BANYAK riawayat poin
+    public function pointHistories()//satu user bisa memiliki BANYAK riawayat poin
     {
         return $this->hasMany(PointHistory::class);
     }
-    public function Feedbacks()//satu user bisa melakukan lebih dari 1 feedback
+    public function feedbacks()//satu user bisa melakukan lebih dari 1 feedback
     {
         return $this->hasMany(Feedback::class);
     }
-    public function CoachReview()//satu user bisa mereview coach lebih dari 1 kali
+    public function coachReviews()//satu user bisa mereview coach lebih dari 1 kali
     {
         return $this->hasMany(CoachReview::class);
     }

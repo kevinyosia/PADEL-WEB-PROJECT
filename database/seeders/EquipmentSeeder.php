@@ -31,7 +31,14 @@ class EquipmentSeeder extends Seeder
         ];
 
         foreach ($equipments as $equipment) {
-            Equipment::create($equipment);
+            Equipment::updateOrCreate(
+                ['nama_alat' => $equipment['nama_alat']],
+                [
+                    'kategori'  => $equipment['kategori'],
+                    'harga'     => $equipment['harga'],
+                    'deskripsi' => $equipment['deskripsi'],
+                ]
+            );
         }
     }
 }
