@@ -171,7 +171,7 @@ class BookingController extends Controller
                 $reservation->equipment()->attach($pivotRows);
             }
 
-            Transaction::create([
+            $transaction = Transaction::create([
                 'reservation_id' => $reservation->id,
                 'total_harga_lapangan' => $totalHargaLapangan,
                 'total_harga_coach' => $totalHargaCoach,
@@ -179,10 +179,13 @@ class BookingController extends Controller
                 'grand_total' => $grandTotal,
                 'metode_pembayaran' => 'transfer',
                 'channel_pembayaran' => $validated['payment_channel'],
-                'status_pembayaran' => 'lunas',
+                'status_pembayaran' => 'belum_lunas',
             ]);
+
+            return $transaction;
         });
 
-        return redirect()->route('booking.index')->with('status', 'Reservasi dan pembayaran berhasil diproses.');
+        // Redirect ke payment page
+        return redirect()->route('payment.page', $transaction->id);
     }
 }

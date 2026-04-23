@@ -16,10 +16,14 @@ use App\Http\Controllers\ProShopController;
 use App\Http\Controllers\MembershipController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\PaymentController;
 
 Route::get('/', function () {
     return view('welcome');
 });
+
+// ── Midtrans Webhook (outside auth middleware) ──
+Route::post('/webhook/midtrans', [PaymentController::class, 'webhook'])->withoutMiddleware(\App\Http\Middleware\VerifyCsrfToken::class);
 
 // ── Manager Login Routes (MUST be outside auth middleware) ──
 Route::prefix('manajemen')->name('manager.')->group(function () {
@@ -67,6 +71,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/courts/availability', [CourtController::class, 'availability'])->name('courts.availability');
     Route::get('/booking', [BookingController::class, 'index'])->name('booking.index');
     Route::post('/booking', [BookingController::class, 'store'])->name('booking.store');
+    
+    // Payment routes
+    Route::post('/payment/snap-token', [PaymentController::class, 'generateSnapToken'])->name('payment.snap-token');
+    Route::get('/payment/{transaction}', [PaymentController::class, 'paymentPage'])->name('payment.page');
+    Route::get('/payment/{transaction}/status', [PaymentController::class, 'checkStatus'])->name('payment.status');
+    
     Route::get('/coaches', [CoachesPageController::class, 'index'])->name('coaches.index');
     Route::get('/membership', [MembershipController::class, 'index'])->name('membership.index');
     Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');

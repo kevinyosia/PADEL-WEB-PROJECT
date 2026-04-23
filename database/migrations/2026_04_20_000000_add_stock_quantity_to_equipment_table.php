@@ -12,7 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('equipment', function (Blueprint $table) {
-            $table->integer('stock_quantity')->default(0)->after('harga');
+            if (!Schema::hasColumn('equipment', 'stock_quantity')) {
+                if (Schema::hasColumn('equipment', 'harga')) {
+                    $table->integer('stock_quantity')->default(0)->after('harga');
+                } else {
+                    $table->integer('stock_quantity')->default(0);
+                }
+            }
         });
     }
 

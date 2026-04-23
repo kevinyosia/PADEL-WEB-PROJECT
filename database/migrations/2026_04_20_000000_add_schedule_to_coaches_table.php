@@ -18,13 +18,17 @@ return new class extends Migration
     {
         Schema::table('coaches', function (Blueprint $table) {
             // Availability status: active (siap teaching), inactive (tidak siap), on_leave (cuti)
-            $table->enum('availability_status', ['active', 'inactive', 'on_leave'])
-                ->default('inactive')
-                ->after('harga_per_jam');
+            if (!Schema::hasColumn('coaches', 'availability_status')) {
+                $table->enum('availability_status', ['active', 'inactive', 'on_leave'])
+                    ->default('inactive')
+                    ->after('harga_per_jam');
+            }
             
             // Weekly schedule as JSON: {mon, tue, wed, thu, fri} = true/false
-            $table->json('schedule')->default('{"mon":true,"tue":true,"wed":true,"thu":true,"fri":true}')
-                ->after('availability_status');
+            if (!Schema::hasColumn('coaches', 'schedule')) {
+                $table->json('schedule')->nullable()
+                    ->after('availability_status');
+            }
         });
     }
 
