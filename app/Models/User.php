@@ -26,6 +26,15 @@ class User extends Authenticatable
     ];
 
     /**
+     * @property string $name
+     * @property string $email
+     * @property string|null $phone
+     * @property string $password
+     * @property string $role
+     * @property int $points
+     */
+
+    /**
      * The attributes that should be hidden for serialization.
      *
      * @var list<string>

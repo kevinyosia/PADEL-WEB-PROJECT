@@ -194,9 +194,11 @@ class PaymentController extends Controller
         try {
             $status = MidtransTransaction::status($transaction->snap_token ?? 'ORD-' . $transaction->id);
 
+            $midtransStatus = is_array($status) ? ($status['transaction_status'] ?? null) : ($status->transaction_status ?? null);
+
             return response()->json([
                 'status' => $transaction->status_pembayaran,
-                'midtrans_status' => $status->transaction_status,
+                'midtrans_status' => $midtransStatus,
                 'transaction' => $transaction,
             ]);
         } catch (\Exception $e) {

@@ -140,7 +140,8 @@ class BookingController extends Controller
 
         $grandTotal = $totalHargaLapangan + $totalHargaCoach + $totalHargaPerlengkapan + $totalHargaProduk;
 
-        DB::transaction(function () use ($validated, $pivotRows, $totalHargaLapangan, $totalHargaCoach, $totalHargaPerlengkapan, $totalHargaProduk, $grandTotal) {
+        /** @var Transaction $transaction */
+        $transaction = DB::transaction(function () use ($validated, $pivotRows, $totalHargaLapangan, $totalHargaCoach, $totalHargaPerlengkapan, $totalHargaProduk, $grandTotal) {
             $isTaken = Reservation::query()
                 ->where('court_id', $validated['court_id'])
                 ->whereDate('tanggal_booking', $validated['tanggal_booking'])
