@@ -9,7 +9,13 @@ class ProShopController extends Controller
 {
     public function index(): View
     {
-        $equipments = Equipment::where('kategori', 'beli')->get();
+        // Get all sales items (kategori='beli') with stock status
+        $equipments = Equipment::where('kategori', 'beli')
+            ->get()
+            ->map(function ($item) {
+                $item->stock_status = $item->stock_quantity > 0 ? 'in_stock' : 'sold_out';
+                return $item;
+            });
         
         return view('user.proshop.index', compact('equipments'));
     }

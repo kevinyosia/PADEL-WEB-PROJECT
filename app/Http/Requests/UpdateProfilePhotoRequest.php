@@ -4,15 +4,14 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class UpdateRentalItemRateRequest extends FormRequest
+class UpdateProfilePhotoRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
-        // TODO: Implement admin role check when auth system is expanded
-        return true;
+        return auth()->check();
     }
 
     /**
@@ -21,7 +20,7 @@ class UpdateRentalItemRateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'rental_rate' => ['required', 'integer', 'min:1', 'max:9999999'],
+            'photo' => ['required', 'image', 'mimes:jpeg,png,jpg,gif', 'max:5120'], // max 5MB
         ];
     }
 
@@ -31,10 +30,10 @@ class UpdateRentalItemRateRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'rental_rate.required' => 'Harga rental wajib diisi',
-            'rental_rate.integer' => 'Harga rental harus berupa angka',
-            'rental_rate.min' => 'Harga rental harus lebih dari 0',
-            'rental_rate.max' => 'Harga rental terlalu besar',
+            'photo.required' => 'Foto profil wajib diupload',
+            'photo.image' => 'File harus berupa gambar',
+            'photo.mimes' => 'Format gambar harus jpeg, png, jpg, atau gif',
+            'photo.max' => 'Ukuran gambar maksimal 5MB',
         ];
     }
 }

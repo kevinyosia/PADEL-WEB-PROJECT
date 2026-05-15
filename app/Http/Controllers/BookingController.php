@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\DB;
 use App\Models\Court;
 use App\Models\Coach;
 use App\Models\Equipment;
+use App\Models\Membership;
+use App\Models\PointHistory;
 use App\Models\Reservation;
 use App\Models\Transaction;
 use Illuminate\Validation\ValidationException;
@@ -36,6 +38,9 @@ class BookingController extends Controller
         $coaches = Coach::where('availability_status', '<>', 'deleted')->get();
         $equipments = Equipment::where('kategori', 'sewa')->get();
         $products = Equipment::where('kategori', 'beli')->get();
+        $membership = Auth::user()->membership;
+        $isMember = $membership !== null;
+        $availablePoints = $isMember ? (int) $membership->total_poin_aktif : 0;
 
         // Parse query parameters dari courts page
         $courtId = $request->query('court_id');
@@ -71,7 +76,7 @@ class BookingController extends Controller
         return view('user.booking.index', compact(
             'timeSlots', 'courts', 'coaches', 'equipments', 'products',
             'court', 'courtName', 'courtPrice', 'durasiJam', 'tanggalFormatted',
-            'jamMulai', 'jamSelesai', 'tanggal'
+            'jamMulai', 'jamSelesai', 'tanggal', 'isMember', 'availablePoints'
         ));
     }
 
@@ -83,7 +88,7 @@ class BookingController extends Controller
             'tanggal_booking' => ['required', 'date'],
             'jam_mulai' => ['required', 'date_format:H:i'],
             'jam_selesai' => ['required', 'date_format:H:i', 'after:jam_mulai'],
-            'payment_channel' => ['required', 'in:virtual_account,m_banking'],
+            'point_to_use' => ['nullable', 'integer', 'min:0'],
             'equipment_items' => ['nullable', 'array'],
             'equipment_items.*.equipment_id' => ['required_with:equipment_items', 'exists:equipment,id'],
             'equipment_items.*.jumlah' => ['required_with:equipment_items', 'integer', 'min:1'],
@@ -139,9 +144,16 @@ class BookingController extends Controller
         }
 
         $grandTotal = $totalHargaLapangan + $totalHargaCoach + $totalHargaPerlengkapan + $totalHargaProduk;
+        $pointToUse = (int) ($validated['point_to_use'] ?? 0);
+
+        if ($pointToUse > 0 && !Auth::user()->membership) {
+            throw ValidationException::withMessages([
+                'point_to_use' => 'Hanya member yang dapat menggunakan poin.',
+            ]);
+        }
 
         /** @var Transaction $transaction */
-        $transaction = DB::transaction(function () use ($validated, $pivotRows, $totalHargaLapangan, $totalHargaCoach, $totalHargaPerlengkapan, $totalHargaProduk, $grandTotal) {
+        $transaction = DB::transaction(function () use ($validated, $pivotRows, $totalHargaLapangan, $totalHargaCoach, $totalHargaPerlengkapan, $totalHargaProduk, $grandTotal, $pointToUse) {
             $isTaken = Reservation::query()
                 ->where('court_id', $validated['court_id'])
                 ->whereDate('tanggal_booking', $validated['tanggal_booking'])
@@ -172,16 +184,54 @@ class BookingController extends Controller
                 $reservation->equipment()->attach($pivotRows);
             }
 
+            $pointDiscount = 0;
+            $membership = null;
+            if ($pointToUse > 0) {
+                $membership = Membership::query()
+                    ->where('user_id', Auth::id())
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$membership) {
+                    throw ValidationException::withMessages([
+                        'point_to_use' => 'Membership tidak ditemukan.',
+                    ]);
+                }
+
+                $availablePoints = (int) $membership->total_poin_aktif;
+                if ($pointToUse > $availablePoints) {
+                    throw ValidationException::withMessages([
+                        'point_to_use' => 'Poin tidak mencukupi. Sisa poin Anda: ' . number_format($availablePoints, 0, ',', '.'),
+                    ]);
+                }
+
+                $pointDiscount = min($pointToUse, $grandTotal);
+            }
+
+            $finalGrandTotal = max(0, $grandTotal - $pointDiscount);
+
             $transaction = Transaction::create([
                 'reservation_id' => $reservation->id,
                 'total_harga_lapangan' => $totalHargaLapangan,
                 'total_harga_coach' => $totalHargaCoach,
                 'total_harga_perlengkapan' => $totalHargaPerlengkapan + $totalHargaProduk,
-                'grand_total' => $grandTotal,
+                'potongan_poin' => $pointDiscount,
+                'grand_total' => $finalGrandTotal,
                 'metode_pembayaran' => 'transfer',
-                'channel_pembayaran' => $validated['payment_channel'],
+                'channel_pembayaran' => 'virtual_account',
                 'status_pembayaran' => 'belum_lunas',
             ]);
+
+            if ($pointDiscount > 0 && $membership) {
+                $membership->decrement('total_poin_aktif', $pointDiscount);
+                $membership->increment('total_poin_terpakai', $pointDiscount);
+
+                PointHistory::create([
+                    'user_id' => Auth::id(),
+                    'jumlah_poin' => -$pointDiscount,
+                    'keterangan' => 'Penukaran poin untuk transaksi #' . $transaction->id,
+                ]);
+            }
 
             return $transaction;
         });

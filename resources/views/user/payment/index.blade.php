@@ -1,6 +1,14 @@
-@extends('layouts.app')
+@extends('layouts.user')
 
 @section('content')
+<style>
+    #payButton:hover {
+        background-color: #4338ca !important;
+    }
+    #payButton:active {
+        opacity: 0.9;
+    }
+</style>
 <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-2xl mx-auto">
         <!-- Header -->
@@ -22,7 +30,7 @@
                 @if($transaction->reservation->coach)
                 <div class="flex justify-between items-center py-2 border-b">
                     <span class="text-gray-600">Coach</span>
-                    <span class="font-medium">{{ $transaction->reservation->coach->nama_coach ?? 'Tidak ada' }}</span>
+                    <span class="font-medium">{{ $transaction->reservation->coach->user->name ?? 'Coach terpilih' }}</span>
                 </div>
                 @endif
                 
@@ -51,6 +59,13 @@
                     <span class="font-medium">Rp {{ number_format($transaction->total_harga_perlengkapan, 0, ',', '.') }}</span>
                 </div>
                 @endif
+
+                @if(($transaction->potongan_poin ?? 0) > 0)
+                <div class="flex justify-between items-center py-2">
+                    <span class="text-gray-700">Potongan Poin Member</span>
+                    <span class="font-medium text-green-700">- Rp {{ number_format($transaction->potongan_poin, 0, ',', '.') }}</span>
+                </div>
+                @endif
                 
                 <div class="flex justify-between items-center py-3 border-t-2 bg-indigo-50 px-3 rounded mt-4">
                     <span class="text-lg font-bold text-gray-900">Total Pembayaran</span>
@@ -68,30 +83,31 @@
                 @elseif($transaction->status_pembayaran === 'pending')
                     <span class="text-yellow-600 font-semibold">Menunggu Pembayaran</span>
                 @else
-                    <span class="text-red-600 font-semibold">{{ ucfirst(str_replace('_', ' ', $transaction->status_pembayaran)) }}</span>
+                    <span class="text-red-600 font-semibold">{{ $transaction->status_pembayaran }}</span>
                 @endif
             </p>
+            <p class="text-xs text-gray-500 mt-2">Debug: Status = "{{ $transaction->status_pembayaran }}" | Condition Result = {{ $transaction->status_pembayaran !== 'lunas' ? 'TRUE' : 'FALSE' }}</p>
         </div>
 
         <!-- Payment Button / Snap Container -->
         @if($transaction->status_pembayaran !== 'lunas')
-        <div class="bg-white rounded-lg shadow-lg p-6">
-            <button id="payButton" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200">
+        <div style="background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 24px; margin-top: 24px;">
+            <button id="payButton" style="width: 100%; background-color: #4f46e5; color: white; font-weight: bold; padding: 12px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 16px; transition: background-color 0.2s;">
                 Lanjutkan ke Pembayaran
             </button>
-            <p class="text-center text-gray-500 text-sm mt-3">
+            <p style="text-align: center; color: #6b7280; font-size: 14px; margin-top: 12px;">
                 Klik tombol di atas untuk melanjutkan pembayaran melalui Midtrans Snap
             </p>
         </div>
         @else
-        <div class="bg-green-50 border-l-4 border-green-500 p-6 rounded-lg">
-            <div class="flex items-center">
-                <svg class="w-8 h-8 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+        <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 24px; border-radius: 8px; margin-top: 24px;">
+            <div style="display: flex; align-items: center;">
+                <svg style="width: 32px; height: 32px; color: #22c55e; margin-right: 12px;" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                 </svg>
                 <div>
-                    <h3 class="text-lg font-semibold text-green-800">Pembayaran Berhasil</h3>
-                    <p class="text-green-700">Terima kasih! Reservasi Anda telah dikonfirmasi.</p>
+                    <h3 style="font-size: 18px; font-weight: 600; color: #166534;">Pembayaran Berhasil</h3>
+                    <p style="color: #15803d;">Terima kasih! Reservasi Anda telah dikonfirmasi.</p>
                 </div>
             </div>
         </div>
@@ -123,13 +139,14 @@
                 snap.pay(data.snap_token, {
                     onSuccess: function(result) {
                         console.log('Payment success:', result);
-                        // Check payment status and redirect
-                        checkPaymentStatus();
+                        const orderId = encodeURIComponent(result?.order_id || '');
+                        window.location.href = `/payment/${transactionId}/complete?order_id=${orderId}`;
                     },
                     onPending: function(result) {
                         console.log('Payment pending:', result);
-                        // Check payment status
-                        checkPaymentStatus();
+                        const orderId = result?.order_id || '';
+                        checkPaymentStatus(orderId);
+                        alert('Pembayaran Anda sedang menunggu. Silakan selesaikan pembayaran sesuai instruksi VA.');
                     },
                     onError: function(result) {
                         console.log('Payment error:', result);
@@ -137,12 +154,11 @@
                     },
                     onClose: function() {
                         console.log('Payment dialog closed');
-                        // Check payment status when user closes the modal
-                        checkPaymentStatus();
                     }
                 });
             } else {
-                alert('Gagal mendapatkan token pembayaran');
+                console.error('Error response:', data);
+                alert('Gagal mendapatkan token pembayaran: ' + (data.error || 'Unknown error'));
             }
         })
         .catch(error => {
@@ -151,10 +167,11 @@
         });
     });
 
-    function checkPaymentStatus() {
+    function checkPaymentStatus(orderId = '') {
         const transactionId = {{ $transaction->id }};
-        
-        fetch(`/payment/${transactionId}/status`, {
+        const query = orderId ? `?order_id=${encodeURIComponent(orderId)}` : '';
+
+        fetch(`/payment/${transactionId}/status${query}`, {
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
             }
@@ -162,11 +179,15 @@
         .then(response => response.json())
         .then(data => {
             if (data.status === 'lunas') {
-                alert('Pembayaran Anda berhasil! Terima kasih.');
-                window.location.reload();
+                const encodedOrderId = encodeURIComponent(orderId || data?.transaction?.midtrans_order_id || '');
+                window.location.href = `/payment/${transactionId}/complete?order_id=${encodedOrderId}`;
             }
         })
         .catch(error => console.error('Error checking status:', error));
     }
+
+    @if($transaction->status_pembayaran === 'pending')
+    setInterval(() => checkPaymentStatus(), 10000);
+    @endif
 </script>
 @endsection

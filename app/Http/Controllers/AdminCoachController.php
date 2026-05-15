@@ -4,12 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreCoachRequest;
 use App\Http\Requests\UpdateCoachRequest;
+use App\Traits\HandleFileUpload;
 use App\Models\Coach;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 
 class AdminCoachController extends Controller
 {
+    use HandleFileUpload;
+
     /**
      * Show coach management list
      */
@@ -54,6 +57,12 @@ class AdminCoachController extends Controller
             'role' => 'coach',
         ]);
 
+        // Upload photo if provided (optional)
+        $photoPath = null;
+        if ($request->hasFile('photo')) {
+            $photoPath = $this->uploadFile($request->file('photo'), 'photos/coaches');
+        }
+
         // Create coach record
         Coach::create([
             'user_id' => $user->id,
@@ -67,6 +76,7 @@ class AdminCoachController extends Controller
                 'thu' => $validated['schedule']['thu'] ?? false,
                 'fri' => $validated['schedule']['fri'] ?? false,
             ],
+            'photo' => $photoPath,
         ]);
 
         return redirect()->route('admin.coaches.index')->with('success', 'Coach berhasil didaftarkan. Password default: password123');
@@ -87,6 +97,12 @@ class AdminCoachController extends Controller
     {
         $validated = $request->validated();
 
+        // Upload photo if provided (optional)
+        $photoPath = $coach->photo;
+        if ($request->hasFile('photo')) {
+            $photoPath = $this->uploadFile($request->file('photo'), 'photos/coaches', $coach->photo);
+        }
+
         $coach->update([
             'deskripsi_keahlian' => $validated['deskripsi_keahlian'],
             'harga_per_jam' => $validated['harga_per_jam'],
@@ -98,6 +114,7 @@ class AdminCoachController extends Controller
                 'thu' => $validated['schedule']['thu'] ?? false,
                 'fri' => $validated['schedule']['fri'] ?? false,
             ],
+            'photo' => $photoPath,
         ]);
 
         return redirect()->route('admin.coaches.index')->with('success', 'Data coach berhasil diperbarui');
@@ -120,6 +137,9 @@ class AdminCoachController extends Controller
      */
     public function destroy(Coach $coach)
     {
+        // Delete coach photo if exists
+        $this->deleteFile($coach->photo);
+
         $user = $coach->user;
         $coach->delete();
         $user->delete();
@@ -127,3 +147,4 @@ class AdminCoachController extends Controller
         return redirect()->route('admin.coaches.index')->with('success', 'Coach dan akunnya berhasil dihapus');
     }
 }
+

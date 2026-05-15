@@ -113,13 +113,12 @@
     <div class="product-grid">
         @foreach($equipments as $eq)
         @php
-            // Placeholder stock visual based on ID parity
-            $stockStatus = 'in_stock';
-            $stockLabel  = 'In Stock';
-            $stockClass  = 'badge-in-stock';
-            // Could be enhanced when stock column added
+            $stockStatus = $eq->stock_status;
+            $stockLabel  = $stockStatus === 'sold_out' ? 'Sold Out' : 'In Stock';
+            $stockClass  = $stockStatus === 'sold_out' ? 'badge-out-stock' : 'badge-in-stock';
+            $isDisabled  = $stockStatus === 'sold_out';
         @endphp
-        <div class="product-card">
+        <div class="product-card" @if($isDisabled) style="opacity: 0.6;" @endif>
             <div class="product-img">🎾</div>
             <div class="product-body">
                 <span class="product-badge {{ $stockClass }}">● {{ $stockLabel }}</span>
@@ -133,7 +132,11 @@
                     <div>
                         <div class="product-price">{{ number_format($eq->harga,0,',','.') }} IDR</div>
                     </div>
-                    <span class="buy-tag">Beli</span>
+                    @if(!$isDisabled)
+                        <span class="buy-tag">Beli</span>
+                    @else
+                        <span class="buy-tag" style="background: #FCE0DC; color: #8B2020;">Habis</span>
+                    @endif
                 </div>
             </div>
         </div>

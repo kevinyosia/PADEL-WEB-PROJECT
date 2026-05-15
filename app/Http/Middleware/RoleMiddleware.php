@@ -21,9 +21,9 @@ class RoleMiddleware
             return redirect('/login');
         }
 
-        // 2. Cek apakah role user sesuai dengan yang diminta di Route
+        
         if (Auth::user()->role !== $role) {
-            // Jika tidak sesuai (misal Customer coba masuk URL Admin), lemparkan ke halaman 403 (Forbidden)
+            
             abort(403, 'Akses Ditolak. Anda tidak memiliki izin ke halaman ini.');
         }
 

@@ -18,8 +18,8 @@ class DatabaseSeeder extends Seeder
             CourtSeeder::class,
             CoachSeeder::class,
             EquipmentSeeder::class,
-            ConsumableSeeder::class,
-            RentalItemSeeder::class,
+            // ConsumableSeeder::class, // MERGED INTO EQUIPMENT SEEDER
+            // RentalItemSeeder::class, // MERGED INTO EQUIPMENT SEEDER
         ]);
         
         Reservation::factory(30)->create();

@@ -19,24 +19,23 @@
             </div>
         @endif
 
-        <!-- Sales Inventory Section (Consumables) -->
+        <!-- Sales Inventory Section (Equipment kategori='beli') -->
         <div class="mb-12">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-bold text-gray-900">Sales Inventory <span class="text-sm text-gray-500 font-normal">(Consumables)</span></h2>
+                <h2 class="text-2xl font-bold text-gray-900">Sales Inventory <span class="text-sm text-gray-500 font-normal">(Products for Purchase)</span></h2>
                 <a href="#" class="text-blue-600 hover:text-blue-800 font-medium text-sm">Export CSV</a>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                @forelse($consumables as $consumable)
+                @forelse($salesItems as $item)
                     <div class="bg-white rounded-lg shadow-md p-6">
                         <!-- Status Badge -->
                         <div class="flex justify-between items-start mb-4">
                             <div>
                                 @php
-                                    $status = $consumable->getStockStatus();
+                                    $status = $item->stock_quantity > 0 ? 'IN STOCK' : 'OUT OF STOCK';
                                     $statusClasses = [
                                         'IN STOCK' => 'bg-green-100 text-green-800',
-                                        'LOW STOCK' => 'bg-yellow-100 text-yellow-800',
                                         'OUT OF STOCK' => 'bg-red-100 text-red-800',
                                     ];
                                     $statusClass = $statusClasses[$status] ?? 'bg-gray-100 text-gray-800';
@@ -49,22 +48,22 @@
                         </div>
 
                         <!-- Product Info -->
-                        <h3 class="text-lg font-bold text-gray-900">{{ $consumable->name }}</h3>
-                        <p class="text-xs text-gray-500 mb-4">SKU: {{ $consumable->sku }}</p>
+                        <h3 class="text-lg font-bold text-gray-900">{{ $item->nama_alat }}</h3>
+                        <p class="text-xs text-gray-500 mb-4">SKU: {{ $item->sku ?? 'N/A' }}</p>
 
                         <!-- Price Section -->
-                        <form action="{{ route('admin.consumables.update-price', $consumable) }}" method="POST" class="mb-4">
+                        <form action="{{ route('admin.equipment.update-price', $item) }}" method="POST" class="mb-4">
                             @csrf
                             @method('PATCH')
                             <div class="flex items-center mb-2">
                                 <label class="text-sm text-gray-600 font-medium mr-2">Price</label>
                                 <div class="flex items-center">
-                                    <span class="text-gray-600">$</span>
+                                    <span class="text-gray-600">Rp</span>
                                     <input 
                                         type="number" 
                                         name="purchase_price" 
-                                        value="{{ $consumable->purchase_price }}"
-                                        class="w-24 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        value="{{ $item->harga }}"
+                                        class="w-28 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     >
                                     <button type="submit" class="ml-2 px-3 py-1 text-blue-600 hover:text-blue-800" title="Edit price">
                                         ✏️
@@ -76,15 +75,39 @@
                             @enderror
                         </form>
 
-                        <!-- Stock Info -->
+                        <!-- Stock Section -->
+                        <form action="{{ route('admin.equipment.update-stock', $item) }}" method="POST" class="mb-4">
+                            @csrf
+                            @method('PATCH')
+                            <div class="flex items-center">
+                                <label class="text-sm text-gray-600 font-medium mr-2">Stock</label>
+                                <div class="flex items-center">
+                                    <input 
+                                        type="number" 
+                                        name="stock_quantity" 
+                                        value="{{ $item->stock_quantity }}"
+                                        class="w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        min="0"
+                                    >
+                                    <button type="submit" class="ml-2 px-3 py-1 text-blue-600 hover:text-blue-800" title="Edit stock">
+                                        ✏️
+                                    </button>
+                                </div>
+                            </div>
+                            @error('stock_quantity')
+                                <p class="text-red-500 text-xs">{{ $message }}</p>
+                            @enderror
+                        </form>
+
+                        <!-- Current Stock Display -->
                         <div class="text-sm">
                             <p class="text-gray-600">Current Stock</p>
-                            <p class="text-lg font-bold text-gray-900">{{ $consumable->stock_quantity }}</p>
+                            <p class="text-lg font-bold text-gray-900">{{ $item->stock_quantity }}/{{ $item->max_capacity }}</p>
                         </div>
                     </div>
                 @empty
                     <div class="col-span-full bg-white rounded-lg shadow-md p-12 text-center">
-                        <p class="text-gray-500">Tidak ada barang konsumsi yang ditemukan</p>
+                        <p class="text-gray-500">Tidak ada barang penjualan yang ditemukan</p>
                     </div>
                 @endforelse
             </div>
@@ -127,7 +150,7 @@
 
                                     <!-- Rental Rate -->
                                     <td class="px-4 py-4">
-                                        <form action="{{ route('admin.rental-items.update-rate', $item) }}" method="POST" class="flex items-center gap-2">
+                                        <form action="{{ route('admin.equipment.update-rate', $item) }}" method="POST" class="flex items-center gap-2">
                                             @csrf
                                             @method('PATCH')
                                             <span class="text-gray-600">$</span>
@@ -165,7 +188,25 @@
 
                                     <!-- Inventory -->
                                     <td class="px-4 py-4">
-                                        <p class="text-sm font-semibold text-gray-900">{{ $item->stock_quantity }} / {{ $item->max_capacity }}</p>
+                                        <form action="{{ route('admin.equipment.update-stock', $item) }}" method="POST" class="flex items-center gap-2 mb-2">
+                                            @csrf
+                                            @method('PATCH')
+                                            <input 
+                                                type="number" 
+                                                name="stock_quantity" 
+                                                value="{{ $item->stock_quantity }}"
+                                                class="w-16 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                min="0"
+                                            >
+                                            <span class="text-gray-600">/</span>
+                                            <span class="text-sm font-semibold text-gray-900">{{ $item->max_capacity }}</span>
+                                            <button type="submit" class="text-blue-600 hover:text-blue-800" title="Edit stock">
+                                                ✏️
+                                            </button>
+                                        </form>
+                                        @error('stock_quantity')
+                                            <p class="text-red-500 text-xs">{{ $message }}</p>
+                                        @enderror
                                         <p class="text-xs text-gray-500">{{ $item->getStockStatus() }}</p>
                                     </td>
                                 </tr>

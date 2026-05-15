@@ -34,6 +34,18 @@
         font-size: 22px; color: var(--text-dark);
     }
 
+    .payment-success-banner {
+        margin: 16px 28px 0;
+        background: #e8f7ee;
+        border: 1px solid #9dd8b1;
+        border-left: 6px solid #1f8f4d;
+        border-radius: 12px;
+        padding: 12px 14px;
+        color: #155e36;
+        font-size: 14px;
+        font-weight: 700;
+    }
+
     /* ── ADS Banner ── */
     .ads-banner {
         margin: 20px 28px 0;
@@ -249,6 +261,12 @@
 
 @section('content')
 <div class="page-wrap">
+
+    @if(session('success'))
+    <div class="payment-success-banner">
+        {{ session('success') }}
+    </div>
+    @endif
 
     {{-- Topbar --}}
     <div class="page-topbar">

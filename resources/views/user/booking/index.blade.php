@@ -190,15 +190,33 @@
     /* Payment channel */
     .payment-section { margin-bottom: 20px; }
     .payment-title { font-size: 13px; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase; letter-spacing:.07em; }
-    .payment-options { display: flex; gap: 10px; }
-    .payment-opt {
-        flex: 1; padding: 12px 16px;
-        border: 2px solid #E8E3D3; border-radius: 12px;
-        cursor: pointer; transition: all .15s; text-align: center;
-        font-size: 13px; font-weight: 700; color: var(--text-muted);
+    .point-input-wrap {
+        display: flex; align-items: center; gap: 12px;
         background: var(--cream-card);
+        border: 1px solid rgba(0,0,0,0.08);
+        border-radius: 12px;
+        padding: 12px 14px;
     }
-    .payment-opt.selected { border-color: var(--green-mid); color: var(--green-deep); background: #E6EDD8; }
+    .point-input {
+        width: 220px;
+        border: 1px solid #D8D2C0;
+        border-radius: 10px;
+        padding: 10px 12px;
+        background: #fff;
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--text-dark);
+    }
+    .point-input:disabled {
+        background: #ECE8DD;
+        color: #9A9588;
+        cursor: not-allowed;
+    }
+    .point-note {
+        font-size: 12px;
+        color: var(--text-muted);
+        line-height: 1.4;
+    }
 </style>
 @endpush
 
@@ -311,12 +329,27 @@
         </div>
     </div>
 
-    {{-- Payment Channel --}}
+    {{-- Point Input --}}
     <div class="payment-section" style="margin-top:20px;">
-        <div class="payment-title">Metode Pembayaran</div>
-        <div class="payment-options">
-            <div class="payment-opt selected" id="payVA" onclick="selectPayment('virtual_account')">Virtual Account</div>
-            <div class="payment-opt" id="payMB" onclick="selectPayment('m_banking')">M-Banking</div>
+        <div class="payment-title">Gunakan Poin Member (Potongan Harga)</div>
+        <div class="point-input-wrap">
+            <input
+                type="number"
+                id="pointInput"
+                class="point-input"
+                min="0"
+                step="1"
+                value="0"
+                {{ $isMember ? '' : 'disabled' }}
+                oninput="onPointInputChange(this.value)"
+            >
+            <div class="point-note">
+                @if($isMember)
+                    Saldo poin aktif: <strong>{{ number_format($availablePoints, 0, ',', '.') }}</strong> poin. 1 poin = Rp1.
+                @else
+                    Input poin terkunci. Hanya pengguna yang sudah menjadi member yang bisa memakai poin.
+                @endif
+            </div>
         </div>
     </div>
 
@@ -344,6 +377,7 @@
             <div class="modal-line" id="mCoachLine" style="display:none;"><span>Coach</span><span id="mCoachPrice">—</span></div>
             <div class="modal-line" id="mEquipLine" style="display:none;"><span>Perlengkapan</span><span id="mEquipPrice">—</span></div>
             <div class="modal-line" id="mProductLine" style="display:none;"><span>Pro Shops</span><span id="mProductPrice">—</span></div>
+            <div class="modal-line" id="mPointLine" style="display:none;"><span>Potongan Poin</span><span id="mPointPrice">—</span></div>
             <div class="modal-line total"><span>Total Bayar</span><span id="mTotal">Rp{{ number_format($courtPrice ?? 0,0,',','.') }}</span></div>
         </div>
         <div class="modal-actions">
@@ -361,7 +395,7 @@
     <input type="hidden" name="jam_mulai"       value="{{ request('jam_mulai') }}">
     <input type="hidden" name="jam_selesai"     value="{{ request('jam_selesai') }}">
     <input type="hidden" name="coach_id"        id="finalCoachId" value="">
-    <input type="hidden" name="payment_channel" id="finalPayment" value="virtual_account">
+    <input type="hidden" name="point_to_use" id="finalPointUse" value="0">
     <div id="equipInputs"></div>
 </form>
 @endsection
@@ -370,11 +404,13 @@
 <script>
 const COURT_PRICE  = {{ $courtPrice ?? 0 }};
 const DURASI_JAM   = {{ $durasiJam ?? 1 }};
+const IS_MEMBER = {{ $isMember ? 'true' : 'false' }};
+const AVAILABLE_POINTS = {{ (int) ($availablePoints ?? 0) }};
 let selectedCoach  = null;
 let coachPrice     = 0;
+let pointsUsed     = 0;
 let equipmentQtys  = {};   // { id: { qty, price } }
 let productQtys    = {};   // { id: { qty, price } }
-let paymentChannel = 'virtual_account';
 
 function fmtRp(n) { return Number(n).toLocaleString('id-ID'); }
 
@@ -428,11 +464,20 @@ function changeProductQty(id, price, delta) {
     updateTotal();
 }
 
-// ── Payment ──
-function selectPayment(val) {
-    paymentChannel = val;
-    document.getElementById('payVA').classList.toggle('selected', val==='virtual_account');
-    document.getElementById('payMB').classList.toggle('selected', val==='m_banking');
+function onPointInputChange(raw) {
+    if (!IS_MEMBER) {
+        pointsUsed = 0;
+        return;
+    }
+
+    const numericValue = Number(raw || 0);
+    const maxAllowed = Math.min(AVAILABLE_POINTS, COURT_PRICE + coachPrice + equipTotal() + productTotal());
+    pointsUsed = Math.max(0, Math.min(Math.floor(numericValue), Math.floor(maxAllowed)));
+    const input = document.getElementById('pointInput');
+    if (input && Number(input.value || 0) !== pointsUsed) {
+        input.value = String(pointsUsed);
+    }
+    updateTotal();
 }
 
 // ── Total ──
@@ -442,7 +487,8 @@ function equipTotal() {
 function productTotal() {
     return Object.values(productQtys).reduce((s,e) => s + (e.qty * e.price), 0);
 }
-function grandTotal() { return COURT_PRICE + coachPrice + equipTotal() + productTotal(); }
+function grossTotal() { return COURT_PRICE + coachPrice + equipTotal() + productTotal(); }
+function grandTotal() { return Math.max(0, grossTotal() - pointsUsed); }
 
 function updateTotal() {
     document.getElementById('totalDisplay').textContent = 'Rp' + fmtRp(grandTotal());
@@ -471,6 +517,12 @@ function openConfirm() {
     } else {
         document.getElementById('mProductLine').style.display = 'none';
     }
+    if (pointsUsed > 0) {
+        document.getElementById('mPointLine').style.display = '';
+        document.getElementById('mPointPrice').textContent  = '- Rp' + fmtRp(pointsUsed);
+    } else {
+        document.getElementById('mPointLine').style.display = 'none';
+    }
     document.getElementById('mTotal').textContent = 'Rp' + fmtRp(grandTotal());
     document.getElementById('confirmModal').classList.add('show');
 }
@@ -479,7 +531,7 @@ function closeConfirm() { document.getElementById('confirmModal').classList.remo
 // ── Submit ──
 function submitBooking() {
     document.getElementById('finalCoachId').value = selectedCoach ?? '';
-    document.getElementById('finalPayment').value = paymentChannel;
+    document.getElementById('finalPointUse').value = pointsUsed;
 
     const equipWrap = document.getElementById('equipInputs');
     equipWrap.innerHTML = '';

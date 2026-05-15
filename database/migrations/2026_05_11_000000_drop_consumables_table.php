@@ -1,0 +1,33 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::dropIfExists('consumables');
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::create('consumables', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('sku')->unique();
+            $table->text('description')->nullable();
+            $table->integer('purchase_price'); 
+            $table->integer('stock_quantity')->default(0);
+            $table->integer('max_capacity')->default(100);
+            $table->timestamps();
+        });
+    }
+};

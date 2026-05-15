@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Http\Requests\UpdateProfilePhotoRequest;
+use App\Traits\HandleFileUpload;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -11,6 +13,8 @@ use Illuminate\View\View;
 
 class ProfileController extends Controller
 {
+    use HandleFileUpload;
+
     /**
      * Display the user's profile form.
      */
@@ -35,6 +39,27 @@ class ProfileController extends Controller
         $request->user()->save();
 
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
+    }
+
+    /**
+     * Update the user's profile photo.
+     */
+    public function updatePhoto(UpdateProfilePhotoRequest $request): RedirectResponse
+    {
+        $validated = $request->validated();
+        $user = $request->user();
+
+        // Upload new photo and get path
+        $photoPath = $this->uploadFile(
+            $validated['photo'],
+            'photos/users',
+            $user->photo
+        );
+
+        // Update user with new photo path
+        $user->update(['photo' => $photoPath]);
+
+        return Redirect::route('profile.edit')->with('status', 'photo-updated');
     }
 
     /**

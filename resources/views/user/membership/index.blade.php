@@ -244,7 +244,7 @@
                 Akses promo eksklusif anggota
             </div>
             <div class="card-spacer"></div>
-            <a href="#" class="join-btn">Menjadi Anggota</a>
+            <a href="#" class="join-btn" id="joinMembershipBtn">Menjadi Anggota</a>
         </div>
 
         {{-- Card kanan --}}
@@ -262,4 +262,48 @@
 @endif
 
 </div>
+
+@if(!$isMember)
+<script src="{{ config('midtrans.snap_url') }}" data-client-key="{{ config('midtrans.client_key') }}"></script>
+<script>
+document.getElementById('joinMembershipBtn')?.addEventListener('click', function (e) {
+    e.preventDefault();
+
+    fetch('{{ route("membership.snap-token") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+        },
+        body: JSON.stringify({})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.snap_token) {
+            alert('Gagal memulai pembayaran membership: ' + (data.error || 'Unknown error'));
+            return;
+        }
+
+        snap.pay(data.snap_token, {
+            onSuccess: function(result) {
+                const orderId = encodeURIComponent(result?.order_id || '');
+                window.location.href = `{{ route('membership.complete') }}?order_id=${orderId}`;
+            },
+            onPending: function() {
+                alert('Pembayaran membership Anda sedang menunggu konfirmasi.');
+            },
+            onError: function() {
+                alert('Pembayaran membership gagal. Silakan coba lagi.');
+            },
+            onClose: function() {
+                // no-op
+            }
+        });
+    })
+    .catch(() => {
+        alert('Terjadi kesalahan saat memproses pembayaran membership.');
+    });
+});
+</script>
+@endif
 @endsection

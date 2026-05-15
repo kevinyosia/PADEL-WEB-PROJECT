@@ -22,8 +22,31 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+// ── Debug route ──
+Route::get('/debug/transaction/{id}', function ($id) {
+    $transaction = \App\Models\Transaction::find($id);
+    if (!$transaction) {
+        return response()->json(['error' => 'Transaction not found'], 404);
+    }
+    return response()->json([
+        'id' => $transaction->id,
+        'status_pembayaran' => $transaction->status_pembayaran,
+        'grand_total' => $transaction->grand_total,
+        'snap_token' => $transaction->snap_token,
+        'midtrans_order_id' => $transaction->midtrans_order_id,
+        'reservation_id' => $transaction->reservation_id,
+    ]);
+});
+
+// Reset all transactions to belum_lunas for testing
+Route::get('/debug/reset-transactions', function () {
+    \App\Models\Transaction::query()->update(['status_pembayaran' => 'belum_lunas']);
+    return response()->json(['message' => 'All transactions reset to belum_lunas']);
+});
+
 // ── Midtrans Webhook (outside auth middleware) ──
-Route::post('/webhook/midtrans', [PaymentController::class, 'webhook'])->withoutMiddleware(\App\Http\Middleware\VerifyCsrfToken::class);
+Route::post('/webhook/midtrans', [PaymentController::class, 'webhook'])
+    ->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class);
 
 // ── Manager Login Routes (MUST be outside auth middleware) ──
 Route::prefix('manajemen')->name('manager.')->group(function () {
@@ -63,6 +86,7 @@ Route::get('/dashboard', function () {
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::post('/profile/photo', [ProfileController::class, 'updatePhoto'])->name('profile.update-photo');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::post('/logout', [ProfileController::class, 'logout'])->name('user.logout');
     
@@ -76,9 +100,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/payment/snap-token', [PaymentController::class, 'generateSnapToken'])->name('payment.snap-token');
     Route::get('/payment/{transaction}', [PaymentController::class, 'paymentPage'])->name('payment.page');
     Route::get('/payment/{transaction}/status', [PaymentController::class, 'checkStatus'])->name('payment.status');
+    Route::get('/payment/{transaction}/complete', [PaymentController::class, 'complete'])->name('payment.complete');
     
     Route::get('/coaches', [CoachesPageController::class, 'index'])->name('coaches.index');
     Route::get('/membership', [MembershipController::class, 'index'])->name('membership.index');
+    Route::post('/membership/snap-token', [MembershipController::class, 'generateSnapToken'])->name('membership.snap-token');
+    Route::get('/membership/complete', [MembershipController::class, 'complete'])->name('membership.complete');
     Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
     Route::post('/reviews', [ReviewController::class, 'store'])->name('reviews.store');
     Route::get('/proshop', [ProShopController::class, 'index'])->name('proshop.index');
@@ -105,8 +132,16 @@ Route::middleware('auth')->group(function () {
         
         // Inventory & rentals routes
         Route::get('/inventory', [AdminInventoryController::class, 'index'])->name('inventory.index');
+        // Equipment price update (for both sales and rental)
+        Route::patch('/equipment/{equipment}/price', [AdminInventoryController::class, 'updateEquipmentPrice'])->name('equipment.update-price');
+        Route::patch('/equipment/{equipment}/rate', [AdminInventoryController::class, 'updateEquipmentRate'])->name('equipment.update-rate');
+        Route::patch('/equipment/{equipment}/stock', [AdminInventoryController::class, 'updateEquipmentStock'])->name('equipment.update-stock');
+        Route::post('/equipment', [AdminInventoryController::class, 'storeEquipment'])->name('equipment.store');
+        // Legacy routes for backward compatibility
         Route::patch('/consumables/{consumable}/price', [AdminInventoryController::class, 'updateConsumablePrice'])->name('consumables.update-price');
-        Route::patch('/rental-items/{rentalItem}/rate', [AdminInventoryController::class, 'updateRentalItemRate'])->name('rental-items.update-rate');
+        Route::patch('/consumables/{consumable}/stock', [AdminInventoryController::class, 'updateConsumableStock'])->name('consumables.update-stock');
+        Route::post('/consumables', [AdminInventoryController::class, 'storeConsumable'])->name('consumables.store');
+        Route::patch('/rental-items/{equipment}/rate', [AdminInventoryController::class, 'updateRentalItemRate'])->name('rental-items.update-rate');
         
         // Coach management routes
         Route::get('/coaches', [AdminCoachController::class, 'index'])->name('coaches.index');
