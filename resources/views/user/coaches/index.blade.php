@@ -129,7 +129,13 @@
             $days = ['mon'=>'S','tue'=>'S','wed'=>'R','thu'=>'K','fri'=>'J'];
         @endphp
         <div class="coach-card" data-status="{{ $coach->availability_status ?? 'inactive' }}" id="coachCard{{ $coach->id }}">
-            <div class="coach-avatar">{{ strtoupper(substr($coach->user->name ?? 'C', 0, 1)) }}</div>
+            <div class="coach-avatar">
+                @if($coach->photo)
+                    <img src="{{ asset('storage/' . $coach->photo) }}" alt="{{ $coach->user->name }}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">
+                @else
+                    {{ strtoupper(substr($coach->user->name ?? 'C', 0, 1)) }}
+                @endif
+            </div>
 
             <div class="coach-info">
                 <div class="coach-name-row">

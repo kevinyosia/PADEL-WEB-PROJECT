@@ -35,7 +35,7 @@ class BookingController extends Controller
 
         // Get all data
         $courts = Court::where('status', 'tersedia')->get();
-        $coaches = Coach::where('availability_status', '<>', 'deleted')->get();
+        $coaches = Coach::where('availability_status', 'active')->get();
         $equipments = Equipment::where('kategori', 'sewa')->get();
         $products = Equipment::where('kategori', 'beli')->get();
         $membership = Auth::user()->membership;

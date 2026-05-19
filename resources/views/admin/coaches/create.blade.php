@@ -116,6 +116,53 @@
         }
         .btn-submit:hover { background: #1D4ED8; box-shadow: 0 4px 14px rgba(37,99,235,0.3); }
 
+        /* Photo upload */
+        .photo-upload-section {
+            display: flex; align-items: flex-start; gap: 20px;
+            margin-bottom: 20px;
+        }
+        .photo-upload-area {
+            width: 80px; height: 80px; border-radius: 50%;
+            border: 2px dashed #CBD5E1; background: #F8FAFC;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.2s; flex-shrink: 0;
+            position: relative; overflow: hidden;
+        }
+        .photo-upload-area:hover {
+            border-color: #2563EB; background: #EFF6FF;
+        }
+        .photo-upload-area svg { width: 22px; height: 22px; color: #94A3B8; transition: color 0.2s; }
+        .photo-upload-area:hover svg { color: #2563EB; }
+        .photo-upload-area span {
+            font-size: 9px; font-weight: 700; color: #94A3B8;
+            text-transform: uppercase; letter-spacing: 0.06em;
+            margin-top: 4px; transition: color 0.2s;
+        }
+        .photo-upload-area:hover span { color: #2563EB; }
+        .photo-upload-preview {
+            width: 80px; height: 80px; border-radius: 50%;
+            object-fit: cover; display: none;
+            border: 2px solid #E2E8F0;
+        }
+        .photo-upload-overlay {
+            position: absolute; inset: 0;
+            background: rgba(0,0,0,0.45);
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.2s; border-radius: 50%;
+        }
+        .photo-upload-area:hover .photo-upload-overlay { opacity: 1; }
+        .photo-upload-overlay svg { width: 20px; height: 20px; color: #fff; margin: 0; }
+        .photo-upload-info { flex: 1; }
+        .photo-upload-info .field-label { margin-bottom: 4px; display: block; }
+        .photo-upload-info p {
+            font-size: 11px; color: #94A3B8; line-height: 1.55; margin: 0;
+        }
+        .photo-upload-input { display: none; }
+        .photo-filename {
+            font-size: 11px; color: #2563EB; margin-top: 4px;
+            font-weight: 600; display: none;
+        }
+
         /* Password note */
         .info-note {
             background: #EFF6FF; border: 1px solid #BFDBFE;
@@ -140,12 +187,47 @@
         </div>
 
         <div class="form-card">
-            <form method="POST" action="{{ route('admin.coaches.store') }}">
+            <form method="POST" action="{{ route('admin.coaches.store') }}" enctype="multipart/form-data">
                 @csrf
 
                 {{-- ── Identitas ── --}}
                 <div class="form-section">
                     <div class="form-section-title">Identitas Coach</div>
+
+                    {{-- Photo Upload --}}
+                    <div class="photo-upload-section">
+                        <div>
+                            <input
+                                type="file"
+                                id="photo_input"
+                                name="photo"
+                                class="photo-upload-input"
+                                accept="image/jpeg,image/png,image/webp"
+                            >
+                            <div class="photo-upload-area" id="photo-area" onclick="document.getElementById('photo_input').click()">
+                                <img src="" alt="Preview" class="photo-upload-preview" id="photo-preview">
+                                <svg xmlns="http://www.w3.org/2000/svg" id="photo-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                <span id="photo-text">Upload</span>
+                                <div class="photo-upload-overlay" id="photo-overlay" style="display:none;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="photo-filename" id="photo-filename"></div>
+                            @error('photo')
+                                <div class="field-error" style="margin-top:4px; font-size:10px;">⚠ {{ $message }}</div>
+                            @enderror
+                        </div>
+                        <div class="photo-upload-info">
+                            <label class="field-label">Foto Profil Coach</label>
+                            <p>Klik lingkaran untuk memilih foto.<br>Format: JPG, PNG, atau WebP.<br>Maks. ukuran: 2 MB. (Opsional)</p>
+                        </div>
+                    </div>
 
                     <div class="form-row" style="margin-bottom:18px;">
                         <div class="field-group">
@@ -290,6 +372,32 @@
     </div>
 
     <script>
+        // Preview foto saat dipilih (Register Coach)
+        document.getElementById('photo_input').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                const preview  = document.getElementById('photo-preview');
+                const icon     = document.getElementById('photo-icon');
+                const text     = document.getElementById('photo-text');
+                const overlay  = document.getElementById('photo-overlay');
+                const filename = document.getElementById('photo-filename');
+
+                preview.src = ev.target.result;
+                preview.style.display = 'block';
+                icon.style.display = 'none';
+                text.style.display = 'none';
+                overlay.style.display = 'flex';
+
+                // Tampilkan nama file
+                filename.textContent = '✓ ' + file.name;
+                filename.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        });
+
         // Sync hidden boolean inputs karena Laravel butuh nilai false juga
         // (checkbox unchecked tidak terkirim, tapi StoreCoachRequest butuh 'required, boolean')
         document.querySelector('form').addEventListener('submit', function() {

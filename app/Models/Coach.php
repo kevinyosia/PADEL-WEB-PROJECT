@@ -3,6 +3,17 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @property int $id
+ * @property int $user_id
+ * @property string $deskripsi_keahlian
+ * @property int $harga_per_jam
+ * @property string|null $photo
+ * @property string $availability_status
+ * @property array|null $schedule
+ * @property \Illuminate\Support\Carbon $created_at
+ * @property \Illuminate\Support\Carbon $updated_at
+ */
 class Coach extends Model
 {
     use HasFactory;

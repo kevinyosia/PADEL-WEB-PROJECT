@@ -257,7 +257,11 @@
             </div>
             @forelse($coaches as $coach)
             <div class="coach-option" id="coachOpt{{ $coach->id }}" onclick="selectCoach({{ $coach->id }}, {{ $coach->harga_per_jam }})">
-                <div class="coach-avatar">{{ strtoupper(substr($coach->user->name ?? 'C', 0, 1)) }}</div>
+                <div class="coach-avatar" style="@if($coach->photo)background-image: url('{{ asset('storage/' . $coach->photo) }}'); background-size: cover; background-position: center;@endif">
+                    @if(!$coach->photo)
+                    {{ strtoupper(substr($coach->user->name ?? 'C', 0, 1)) }}
+                    @endif
+                </div>
                 <div>
                     <div class="coach-name">{{ $coach->user->name ?? 'Coach' }}</div>
                     <div class="coach-desc">{{ Str::limit($coach->deskripsi_keahlian, 50) }}</div>
@@ -282,16 +286,24 @@
         </div>
         <div class="accordion-body" id="accEquipBody">
             @forelse($equipments->where('kategori','sewa') as $eq)
-            <div class="equip-row">
+            @php
+                $isOutOfStock = $eq->stock_quantity <= 0;
+            @endphp
+            <div class="equip-row" style="{{ $isOutOfStock ? 'opacity: 0.6;' : '' }}">
                 <div class="equip-icon">🎾</div>
                 <div>
-                    <div class="equip-name">{{ $eq->nama_alat }}</div>
+                    <div class="equip-name" style="display:flex; gap:10px; align-items:center;">
+                        {{ $eq->nama_alat }}
+                        @if($isOutOfStock)
+                        <span style="font-size:10px; font-weight:700; background:#FEE2E2; color:#991B1B; padding:2px 8px; border-radius:4px; text-transform:uppercase; letter-spacing:0.05em;">Out of Stock</span>
+                        @endif
+                    </div>
                     <div class="equip-price"><strong>Rp{{ number_format($eq->harga,0,',','.') }}</strong>/item</div>
                 </div>
                 <div class="qty-wrap">
-                    <button class="qty-btn" onclick="changeQty({{ $eq->id }}, {{ $eq->harga }}, -1)">−</button>
+                    <button class="qty-btn" onclick="changeQty({{ $eq->id }}, {{ $eq->harga }}, -1)" {{ $isOutOfStock ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : '' }}>−</button>
                     <span class="qty-val" id="qty{{ $eq->id }}">0</span>
-                    <button class="qty-btn" onclick="changeQty({{ $eq->id }}, {{ $eq->harga }}, 1)">+</button>
+                    <button class="qty-btn" onclick="changeQty({{ $eq->id }}, {{ $eq->harga }}, 1, {{ $eq->stock_quantity }})" {{ $isOutOfStock ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : '' }}>+</button>
                 </div>
             </div>
             @empty
@@ -311,16 +323,24 @@
         </div>
         <div class="accordion-body" id="accProductBody">
             @forelse($products as $prod)
-            <div class="equip-row">
+            @php
+                $isOutOfStock = $prod->stock_quantity <= 0;
+            @endphp
+            <div class="equip-row" style="{{ $isOutOfStock ? 'opacity: 0.6;' : '' }}">
                 <div class="equip-icon">⚽</div>
                 <div>
-                    <div class="equip-name">{{ $prod->nama_alat }}</div>
+                    <div class="equip-name" style="display:flex; gap:10px; align-items:center;">
+                        {{ $prod->nama_alat }}
+                        @if($isOutOfStock)
+                        <span style="font-size:10px; font-weight:700; background:#FEE2E2; color:#991B1B; padding:2px 8px; border-radius:4px; text-transform:uppercase; letter-spacing:0.05em;">Out of Stock</span>
+                        @endif
+                    </div>
                     <div class="equip-price"><strong>Rp{{ number_format($prod->harga,0,',','.') }}</strong>/item</div>
                 </div>
                 <div class="qty-wrap">
-                    <button class="qty-btn" onclick="changeProductQty({{ $prod->id }}, {{ $prod->harga }}, -1)">−</button>
+                    <button class="qty-btn" onclick="changeProductQty({{ $prod->id }}, {{ $prod->harga }}, -1)" {{ $isOutOfStock ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : '' }}>−</button>
                     <span class="qty-val" id="prod{{ $prod->id }}">0</span>
-                    <button class="qty-btn" onclick="changeProductQty({{ $prod->id }}, {{ $prod->harga }}, 1)">+</button>
+                    <button class="qty-btn" onclick="changeProductQty({{ $prod->id }}, {{ $prod->harga }}, 1, {{ $prod->stock_quantity }})" {{ $isOutOfStock ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : '' }}>+</button>
                 </div>
             </div>
             @empty
@@ -449,17 +469,29 @@ function selectCoach(id, price) {
 }
 
 // ── Equipment ──
-function changeQty(id, price, delta) {
+function changeQty(id, price, delta, maxStock = Infinity) {
     if (!equipmentQtys[id]) equipmentQtys[id] = { qty: 0, price };
-    equipmentQtys[id].qty = Math.max(0, equipmentQtys[id].qty + delta);
+    const newQty = equipmentQtys[id].qty + delta;
+    
+    if (delta > 0 && newQty > maxStock) {
+        return;
+    }
+    
+    equipmentQtys[id].qty = Math.max(0, newQty);
     document.getElementById(`qty${id}`).textContent = equipmentQtys[id].qty;
     updateTotal();
 }
 
 // ── Products ──
-function changeProductQty(id, price, delta) {
+function changeProductQty(id, price, delta, maxStock = Infinity) {
     if (!productQtys[id]) productQtys[id] = { qty: 0, price };
-    productQtys[id].qty = Math.max(0, productQtys[id].qty + delta);
+    const newQty = productQtys[id].qty + delta;
+    
+    if (delta > 0 && newQty > maxStock) {
+        return;
+    }
+    
+    productQtys[id].qty = Math.max(0, newQty);
     document.getElementById(`prod${id}`).textContent = productQtys[id].qty;
     updateTotal();
 }

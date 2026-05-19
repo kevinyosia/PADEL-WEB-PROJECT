@@ -95,6 +95,7 @@
             background: linear-gradient(135deg, #2563EB, #60A5FA);
             display: flex; align-items: center; justify-content: center;
             font-size: 20px; font-weight: 800; color: #fff; flex-shrink: 0;
+            position: relative;
         }
         .coach-id-info { flex: 1; }
         .coach-id-name { font-size: 16px; font-weight: 800; color: #0F172A; }
@@ -125,6 +126,37 @@
             background: #DBEAFE; border-color: #3B82F6; color: #1D4ED8;
             box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
         }
+
+        /* Photo upload */
+        .photo-upload-wrap {
+            position: relative; flex-shrink: 0;
+        }
+        .coach-avatar-lg {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .coach-avatar-lg:hover .avatar-overlay {
+            opacity: 1;
+        }
+        .avatar-img {
+            width: 52px; height: 52px; border-radius: 50%;
+            object-fit: cover; border: 2px solid #E2E8F0;
+            display: block;
+        }
+        .avatar-overlay {
+            position: absolute; inset: 0;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.45);
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.2s;
+            cursor: pointer;
+        }
+        .avatar-overlay svg { width: 18px; height: 18px; color: #fff; }
+        .avatar-change-hint {
+            font-size: 10px; color: #94A3B8; margin-top: 5px;
+            text-align: center; line-height: 1.3;
+        }
+        .photo-upload-input { display: none; }
 
         /* Form actions */
         .form-actions {
@@ -158,7 +190,7 @@
         </div>
 
         <div class="form-card">
-            <form method="POST" action="{{ route('admin.coaches.update', $coach) }}">
+            <form method="POST" action="{{ route('admin.coaches.update', $coach) }}" enctype="multipart/form-data">
                 @csrf
                 @method('PATCH')
 
@@ -167,8 +199,33 @@
                     <div class="form-section-title">Identitas Coach</div>
 
                     <div class="coach-identity-panel">
-                        <div class="coach-avatar-lg">
-                            {{ strtoupper(substr($coach->user->name ?? 'C', 0, 1)) }}
+                        {{-- Photo Upload --}}
+                        <div class="photo-upload-wrap">
+                            <input
+                                type="file"
+                                id="photo_input"
+                                name="photo"
+                                class="photo-upload-input"
+                                accept="image/jpeg,image/png,image/webp"
+                            >
+                            <div class="coach-avatar-lg" id="avatar-trigger" onclick="document.getElementById('photo_input').click()" title="Klik untuk ganti foto">
+                                @if($coach->photo)
+                                    <img src="{{ asset('storage/' . $coach->photo) }}" alt="Foto Coach" class="avatar-img" id="avatar-preview">
+                                @else
+                                    <span id="avatar-initials">{{ strtoupper(substr($coach->user->name ?? 'C', 0, 1)) }}</span>
+                                    <img src="" alt="" class="avatar-img" id="avatar-preview" style="display:none;">
+                                @endif
+                                <div class="avatar-overlay">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="avatar-change-hint">Klik untuk<br>ganti foto</div>
+                            @error('photo')
+                                <div class="field-error" style="margin-top:4px; font-size:10px;">⚠ {{ $message }}</div>
+                            @enderror
                         </div>
                         <div class="coach-id-info">
                             <div class="coach-id-name">{{ $coach->user->name }}</div>
@@ -297,6 +354,26 @@
     </div>
 
     <script>
+        // Preview foto saat dipilih
+        document.getElementById('photo_input').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                const preview = document.getElementById('avatar-preview');
+                const initials = document.getElementById('avatar-initials');
+
+                preview.src = ev.target.result;
+                preview.style.display = 'block';
+                if (initials) initials.style.display = 'none';
+
+                // Hapus background gradient setelah ada foto
+                document.getElementById('avatar-trigger').style.background = 'transparent';
+            };
+            reader.readAsDataURL(file);
+        });
+
         // Inject hidden 0 untuk hari yang tidak dicentang saat submit
         document.querySelector('form').addEventListener('submit', function() {
             const days = ['mon','tue','wed','thu','fri'];

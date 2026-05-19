@@ -241,7 +241,15 @@
                 {{-- Header --}}
                 <div class="card-header">
                     <div class="coach-avatar">
-                        {{ strtoupper(substr($coach->user->name ?? 'C', 0, 1)) }}
+                        @if($coach->photo)
+                            <img 
+                                src="{{ asset('storage/' . $coach->photo) }}" 
+                                alt="Coach Photo" 
+                                style="width:100%; height:100%; object-fit:cover; border-radius:50%;"
+                            >
+                        @else
+                            {{ strtoupper(substr($coach->user->name ?? 'C', 0, 1)) }}
+                        @endif
                     </div>
                     <div class="coach-info">
                         <div class="coach-name">{{ $coach->user->name }}</div>
