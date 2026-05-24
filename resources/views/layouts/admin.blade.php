@@ -238,6 +238,12 @@
                     </a>
                 </li>
                 <li class="sidebar-menu-item">
+                    <a href="{{ route('admin.users.index') }}" class="sidebar-menu-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
+                        <span class="sidebar-menu-icon">👤</span>
+                        Users
+                    </a>
+                </li>
+                <li class="sidebar-menu-item">
                     <a href="{{ route('admin.inventory.index') }}" class="sidebar-menu-link {{ request()->routeIs('admin.inventory.*') ? 'active' : '' }}">
                         <span class="sidebar-menu-icon">📦</span>
                         Inventory
