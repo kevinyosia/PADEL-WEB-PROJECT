@@ -24,6 +24,8 @@ class AdminCourtPricingRequest extends FormRequest
         return [
             'harga_pagi_tengahmalam' => ['required', 'integer', 'min:1', 'max:9999999'],
             'harga_malam' => ['required', 'integer', 'min:1', 'max:9999999'],
+            'harga_weekend' => ['required', 'integer', 'min:1', 'max:9999999'],
+            'harga_weekend_prime' => ['required', 'integer', 'min:1', 'max:9999999'],
         ];
     }
 
@@ -41,6 +43,14 @@ class AdminCourtPricingRequest extends FormRequest
             'harga_malam.integer' => 'Harga malam harus berupa angka',
             'harga_malam.min' => 'Harga malam harus lebih dari 0',
             'harga_malam.max' => 'Harga malam terlalu besar',
+            'harga_weekend.required' => 'Harga weekend normal wajib diisi',
+            'harga_weekend.integer' => 'Harga weekend normal harus berupa angka',
+            'harga_weekend.min' => 'Harga weekend normal harus lebih dari 0',
+            'harga_weekend.max' => 'Harga weekend normal terlalu besar',
+            'harga_weekend_prime.required' => 'Harga weekend prime time wajib diisi',
+            'harga_weekend_prime.integer' => 'Harga weekend prime time harus berupa angka',
+            'harga_weekend_prime.min' => 'Harga weekend prime time harus lebih dari 0',
+            'harga_weekend_prime.max' => 'Harga weekend prime time terlalu besar',
         ];
     }
 }

@@ -14,9 +14,10 @@ class CourtSeeder extends Seeder
             $courts[] = [
                 'nama_lapangan' => 'Bandeja Padel Court ' . $i,
                 'deskripsi' => 'Lapangan padel indoor standar internasional dengan fasilitas premium.',
-                'harga_pagi_tengahmalam' => 275000,
-                'harga_malam' => 388000,
-                'harga_weekend' => 300000,
+                'harga_pagi_tengahmalam' => 245000,
+                'harga_malam' => 295000,
+                'harga_weekend' => 275000,
+                'harga_weekend_prime' => 350000,
                 'status' => 'tersedia'
             ];
         }
@@ -29,6 +30,7 @@ class CourtSeeder extends Seeder
                     'harga_pagi_tengahmalam' => $court['harga_pagi_tengahmalam'],
                     'harga_malam' => $court['harga_malam'],
                     'harga_weekend' => $court['harga_weekend'],
+                    'harga_weekend_prime' => $court['harga_weekend_prime'],
                     'status' => $court['status'],
                 ]
             );

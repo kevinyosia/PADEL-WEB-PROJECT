@@ -26,6 +26,8 @@ class AdminCourtPricingController extends Controller
         $court->update([
             'harga_pagi_tengahmalam' => $validated['harga_pagi_tengahmalam'],
             'harga_malam' => $validated['harga_malam'],
+            'harga_weekend' => $validated['harga_weekend'],
+            'harga_weekend_prime' => $validated['harga_weekend_prime'],
         ]);
 
         return redirect()->back()->with('success', 'Harga lapangan berhasil diperbarui');

@@ -57,13 +57,13 @@ class BookingController extends Controller
         $tanggalFormatted = '';
 
         if ($court && $jamMulai && $jamSelesai) {
-            $mulai = Carbon::createFromFormat('H:i', $jamMulai);
-            $selesai = Carbon::createFromFormat('H:i', $jamSelesai);
+            $mulai = Carbon::createFromFormat('Y-m-d H:i', $tanggal.' '.$jamMulai);
+            $selesai = Carbon::createFromFormat('Y-m-d H:i', $tanggal.' '.$jamSelesai);
             if ($selesai <= $mulai) {
                 $selesai->addDay();
             }
             $durasiJam = max(1, $selesai->diffInHours($mulai));
-            $courtPrice = ($mulai->hour >= 18 ? (int)$court->harga_malam : (int)$court->harga_pagi_tengahmalam) * $durasiJam;
+            $courtPrice = $court->priceForRange($mulai, $selesai);
         }
 
         if ($tanggal) {
@@ -104,11 +104,7 @@ class BookingController extends Controller
         $court = Court::findOrFail($validated['court_id']);
         $coach = !empty($validated['coach_id']) ? Coach::findOrFail($validated['coach_id']) : null;
 
-        $hargaLapanganPerJam = $mulai->hour >= 18
-            ? (int) $court->harga_malam
-            : (int) $court->harga_pagi_tengahmalam;
-
-        $totalHargaLapangan = $hargaLapanganPerJam * $durasiJam;
+        $totalHargaLapangan = $court->priceForRange($mulai, $selesai);
         $totalHargaCoach = $coach ? ((int) $coach->harga_per_jam * $durasiJam) : 0;
 
         $equipmentItems = $validated['equipment_items'] ?? [];

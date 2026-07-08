@@ -26,7 +26,7 @@ class CourtController extends Controller
 
         $courts = Court::query()
             ->orderBy('id')
-            ->get(['id', 'nama_lapangan', 'status', 'harga_pagi_tengahmalam', 'harga_malam']);
+            ->get(['id', 'nama_lapangan', 'status', 'harga_pagi_tengahmalam', 'harga_malam', 'harga_weekend', 'harga_weekend_prime']);
 
         $reservations = Reservation::query()
             ->whereDate('tanggal_booking', $date)
@@ -42,11 +42,11 @@ class CourtController extends Controller
             ];
         }
 
-        $payload = $courts->map(function (Court $court) use ($reservations, $slotTemplate) {
+        $payload = $courts->map(function (Court $court) use ($date, $reservations, $slotTemplate) {
             $courtStatusRaw = strtolower((string) $court->status);
             $isMaintenance = $courtStatusRaw !== 'tersedia';
 
-            $slots = collect($slotTemplate)->map(function (array $slot) use ($court, $reservations, $isMaintenance) {
+            $slots = collect($slotTemplate)->map(function (array $slot) use ($court, $date, $reservations, $isMaintenance) {
                 $slotStart = $this->toMinutes($slot['start']);
                 $slotEnd = $this->toMinutes($slot['end']);
                 if ($slotEnd === 0) {
@@ -74,9 +74,8 @@ class CourtController extends Controller
                     }
                 }
 
-                $price = $slot['hour'] >= 18
-                    ? (int) $court->harga_malam
-                    : (int) $court->harga_pagi_tengahmalam;
+                $slotDateTime = Carbon::parse($date)->setTime($slot['hour'], 0);
+                $price = $court->hourlyRateFor($slotDateTime);
 
                 return [
                     'start' => $slot['start'],
