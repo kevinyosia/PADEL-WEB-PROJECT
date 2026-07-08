@@ -57,6 +57,19 @@
     .price-card.featured .card-feature { color: rgba(255,255,255,0.8); }
     .card-feature-icon { color: var(--green-light); font-size: 14px; }
     .price-card.featured .card-feature-icon { color: #A8D898; }
+    .benefit-value {
+        font-family: 'DM Serif Display', serif;
+        font-size: 54px; line-height: 1; color: var(--text-dark);
+    }
+    .benefit-value span {
+        font-family: 'Figtree', sans-serif; font-size: 13px; font-weight: 800;
+        color: var(--text-muted); text-transform: uppercase; letter-spacing: .08em; margin-left: 4px;
+    }
+    .benefit-note {
+        background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.16);
+        border-radius: 12px; padding: 12px 14px;
+        font-size: 12px; line-height: 1.55; color: rgba(255,255,255,0.72);
+    }
     .card-spacer { flex: 1; }
     .join-btn {
         display: block; width: 100%; padding: 13px;
@@ -72,12 +85,16 @@
         border: 1.5px solid rgba(0,0,0,0.12);
     }
     .join-btn.outline:hover { background: #E8E3D3; }
+    @media (max-width: 960px) {
+        .pricing-cards { flex-direction: column; }
+        .nm-title { font-size: 36px; }
+    }
 
     /* ─── MEMBER ─── */
     .member-wrap { padding: 28px 32px; }
 
     .points-hero {
-        background: var(--green-deep); border-radius: 20px;
+        background: #44664d; border-radius: 20px;
         padding: 32px 36px; color: #fff; margin-bottom: 28px;
         position: relative; overflow: hidden;
     }
@@ -100,16 +117,6 @@
     .hero-points span { font-size: 22px; font-weight: 600; color: rgba(255,255,255,0.6); margin-left: 8px; }
     .hero-desc { font-size: 13px; color: rgba(255,255,255,0.65); line-height: 1.6; max-width: 480px; margin-bottom: 20px; }
     .hero-desc strong { color: rgba(255,255,255,0.9); }
-    .hero-actions { display: flex; gap: 10px; }
-    .hero-btn {
-        padding: 10px 20px; border-radius: 50px;
-        font-size: 13px; font-weight: 700; font-family: 'Figtree', sans-serif;
-        cursor: pointer; transition: all .15s; border: none; text-decoration: none;
-    }
-    .hero-btn.primary { background: #fff; color: var(--green-deep); }
-    .hero-btn.secondary { background: rgba(255,255,255,0.15); color: #fff; }
-    .hero-btn.primary:hover { background: #F5F1E6; }
-    .hero-btn.secondary:hover { background: rgba(255,255,255,0.22); }
 
     /* Transaction table */
     .tx-section { background: var(--cream-card); border-radius: 16px; padding: 24px; border: 1px solid rgba(0,0,0,0.06); }
@@ -140,20 +147,17 @@
 <div class="member-wrap">
     {{-- Points hero --}}
     <div class="points-hero">
-        <div class="hero-badge">Status Anggota Premium</div>
+        <div class="hero-badge">Status Anggota</div>
         <div class="hero-label">Saldo Poin Saat Ini</div>
         <div class="hero-points">
             {{ number_format($membership->total_poin_aktif, 0, ',', '.') }}
             <span>Poin</span>
         </div>
         <div class="hero-desc">
-            Loyalitas Anda memberi Anda lebih dari sekadar waktu di lapangan. Gunakan poin
-            Anda untuk <strong>penyewaan premium</strong>, <strong>peralatan pro-shop</strong> terbaru, dan sesi pelatihan pribadi.
+            Sebagai member, setiap purchase eligible memberi cashback <strong>8% dalam bentuk poin</strong>.
+            Gunakan saldo poin Anda sebagai potongan untuk transaksi berikutnya.
         </div>
-        <div class="hero-actions">
-            <a href="{{ route('proshop.index') }}" class="hero-btn primary">Tukar Poin</a>
-            <button class="hero-btn secondary" onclick="">Lihat Keuntungan</button>
-        </div>
+
     </div>
 
     {{-- Transaction history --}}
@@ -204,21 +208,22 @@
     <div class="nm-eyebrow">Eksklusif Anggota</div>
     <h1 class="nm-title">
         Tingkatkan Permainan Anda<br>
-        dengan <em>Keanggotaan Elit</em>
+        dengan <em>Bandeja Member Pass</em>
     </h1>
     <p class="nm-sub">
-        Bergabunglah dengan lingkaran dalam Bandeja Padel Arena. Buka manfaat premium,
-        akses prioritas, dan hadiah yang disesuaikan untuk atlet yang berdedikasi.
+        Nikmati benefit member yang sederhana dan langsung terasa: cashback poin 8%
+        untuk setiap purchase di Bandeja Padel Arena.
     </p>
 
     <div class="pricing-cards">
         {{-- Card kiri --}}
         <div class="price-card">
             <span class="card-icon-lg">🛍</span>
-            <div class="card-tag">Manfaat Toko</div>
-            <div class="card-name">Cashback Poin<br>5% di Toko</div>
+            <div class="card-tag">Benefit Utama</div>
+            <div class="card-name">Cashback Poin<br>8% untuk Semua Purchase</div>
+            <div class="benefit-value">8<span>%</span></div>
             <div class="card-tagline">
-                Dapatkan hadiah pada setiap pembelian peralatan, dari raket kelas profesional hingga bola baru dan aksesori.
+                Berlaku untuk reservasi lapangan, sewa perlengkapan, coach, dan pembelian item pro shop yang tercatat dalam transaksi.
             </div>
             <div class="card-spacer"></div>
         </div>
@@ -226,22 +231,25 @@
         {{-- Card tengah (featured) --}}
         <div class="price-card featured">
             <span class="card-icon-lg">⭐</span>
-            <div class="card-tag">Elite Pass</div>
-            <div class="card-name">The Elite Pass</div>
-            <div class="card-tagline">Akses penuh ke gaya hidup arena</div>
+            <div class="card-tag">Member Pass</div>
+            <div class="card-name">Bandeja Member Pass</div>
+            <div class="card-tagline">Satu kali beli, benefit berlaku lifetime</div>
             <div class="card-price">Rp 100.000</div>
             <div class="card-price-note">Pembelian Sekali / Lifetime</div>
             <div class="card-feature">
                 <span class="card-feature-icon">✓</span>
-                Prioritas booking lapangan 48 jam sebelumnya
+                Cashback poin 8% untuk semua purchase
             </div>
             <div class="card-feature">
                 <span class="card-feature-icon">✓</span>
-                Cashback poin setiap reservasi
+                Poin masuk ke saldo member setelah transaksi berhasil
             </div>
             <div class="card-feature">
                 <span class="card-feature-icon">✓</span>
-                Akses promo eksklusif anggota
+                Poin dapat digunakan untuk transaksi berikutnya
+            </div>
+            <div class="benefit-note">
+                Benefit member difokuskan pada pengembalian poin 8% untuk setiap purchase yang eligible.
             </div>
             <div class="card-spacer"></div>
             <a href="#" class="join-btn" id="joinMembershipBtn">Menjadi Anggota</a>
@@ -250,10 +258,10 @@
         {{-- Card kanan --}}
         <div class="price-card">
             <span class="card-icon-lg">🎾</span>
-            <div class="card-tag">Manfaat Sewa</div>
-            <div class="card-name">Cashback Poin<br>8% untuk Sewa</div>
+            <div class="card-tag">Cara Kerja</div>
+            <div class="card-name">Semakin Sering Transaksi,<br>Semakin Banyak Poin</div>
             <div class="card-tagline">
-                Pengembalian signifikan untuk waktu lapangan, sewa raket, dan penggunaan mesin. Setiap jam bermain membawa Anda lebih dekat ke pertandingan berikutnya.
+                Setiap pembayaran yang eligible akan menghasilkan poin 8% dari nilai purchase. Saldo poin bisa dipakai sebagai potongan di transaksi berikutnya.
             </div>
             <div class="card-spacer"></div>
         </div>

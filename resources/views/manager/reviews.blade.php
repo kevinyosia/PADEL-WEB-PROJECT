@@ -51,6 +51,11 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {{-- Reviews List (Main) --}}
         <div class="lg:col-span-2 space-y-4">
+            <div class="flex items-center justify-between">
+                <h2 class="text-lg font-bold text-[#0f172a]">Arena Reviews</h2>
+                <span class="text-xs font-semibold text-gray-500">{{ $reviews->total() }} review</span>
+            </div>
+
             @forelse($reviews as $review)
             <div class="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
                 <div class="flex gap-4">
@@ -110,6 +115,77 @@
             {{-- Pagination --}}
             <div class="flex justify-center">
                 {{ $reviews->links() }}
+            </div>
+
+            <div class="pt-6 mt-6 border-t border-gray-200">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-[#0f172a]">Coach Reviews</h2>
+                        <p class="text-xs text-gray-500 mt-1">Ulasan member untuk setiap coach.</p>
+                    </div>
+                    <span class="text-xs font-semibold text-gray-500">{{ $coachReviews->total() }} review</span>
+                </div>
+
+                <div class="space-y-4">
+                    @forelse($coachReviews as $coachReview)
+                    <div class="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                        <div class="flex gap-4">
+                            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-[#2d4533] to-[#6b8f47] flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                                {{ strtoupper(substr($coachReview->user->name ?? 'M', 0, 1)) }}
+                            </div>
+
+                            <div class="flex-1">
+                                <div class="flex justify-between items-start mb-2 gap-4">
+                                    <div>
+                                        <p class="font-bold text-[#0f172a]">{{ $coachReview->user->name ?? 'Member' }}</p>
+                                        <p class="text-xs text-gray-500">
+                                            Untuk {{ $coachReview->coach->user->name ?? 'Coach' }} • {{ $coachReview->created_at->diffForHumans() }}
+                                        </p>
+                                    </div>
+                                    <div class="flex gap-1">
+                                        @for($i = 0; $i < 5; $i++)
+                                            <span class="text-lg">{{ $i < $coachReview->rating ? '⭐' : '☆' }}</span>
+                                        @endfor
+                                    </div>
+                                </div>
+
+                                <p class="text-sm text-gray-700 mb-3 leading-relaxed">
+                                    "{{ $coachReview->review ?? 'Tidak ada komentar' }}"
+                                </p>
+
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                                    <div class="bg-gray-50 p-2 rounded">
+                                        <span class="text-gray-600 font-semibold">COACH</span>
+                                        <p class="text-sm font-bold text-gray-800 mt-1">{{ $coachReview->coach->user->name ?? 'Coach' }}</p>
+                                    </div>
+                                    <div class="bg-gray-50 p-2 rounded">
+                                        <span class="text-gray-600 font-semibold">RATING</span>
+                                        <p class="text-sm font-bold text-gray-800 mt-1">{{ $coachReview->rating }}/5</p>
+                                    </div>
+                                    <div class="bg-gray-50 p-2 rounded">
+                                        <span class="text-gray-600 font-semibold">RESERVASI</span>
+                                        <p class="text-sm font-bold text-gray-800 mt-1">
+                                            @if($coachReview->reservation)
+                                                {{ $coachReview->reservation->court->nama_lapangan ?? 'Lapangan' }} • {{ \Carbon\Carbon::parse($coachReview->reservation->tanggal_booking)->format('d M Y') }}
+                                            @else
+                                                -
+                                            @endif
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    @empty
+                    <div class="bg-white rounded-xl p-12 border border-gray-100 text-center">
+                        <p class="text-gray-500">Belum ada review coach sesuai filter</p>
+                    </div>
+                    @endforelse
+
+                    <div class="flex justify-center">
+                        {{ $coachReviews->links() }}
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -178,6 +254,14 @@
                     <div class="flex justify-between items-center pt-3 border-t border-gray-200">
                         <span class="text-sm text-gray-600">Positive Sentiment</span>
                         <span class="text-2xl font-bold text-green-600">{{ $positiveSentimentPercent }}%</span>
+                    </div>
+                    <div class="flex justify-between items-center pt-3 border-t border-gray-200">
+                        <span class="text-sm text-gray-600">Coach Reviews This Month</span>
+                        <span class="text-2xl font-bold text-[#0f172a]">{{ $totalCoachReviewsThisMonth }}</span>
+                    </div>
+                    <div class="flex justify-between items-center pt-3 border-t border-gray-200">
+                        <span class="text-sm text-gray-600">Coach Rating</span>
+                        <span class="text-2xl font-bold text-yellow-600">{{ $coachRating }}/5</span>
                     </div>
                 </div>
             </div>

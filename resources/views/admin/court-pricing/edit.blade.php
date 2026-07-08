@@ -23,7 +23,7 @@
 
                     <div class="mb-6">
                         <label for="harga_pagi_tengahmalam" class="block text-gray-700 font-bold mb-2">
-                            Harga Pagi - Tengah Malam (06:00 - 17:59)
+                            Weekday Normal (di luar 16:00 - 22:00)
                         </label>
                         <div class="flex items-center">
                             <span class="text-gray-500 mr-2">Rp</span>
@@ -44,7 +44,7 @@
 
                     <div class="mb-6">
                         <label for="harga_malam" class="block text-gray-700 font-bold mb-2">
-                            Harga Malam (18:00 - 05:59 Keesokan Harinya)
+                            Weekday Prime Time (16:00 - 22:00)
                         </label>
                         <div class="flex items-center">
                             <span class="text-gray-500 mr-2">Rp</span>
@@ -63,9 +63,51 @@
                         @enderror
                     </div>
 
+                    <div class="mb-6">
+                        <label for="harga_weekend" class="block text-gray-700 font-bold mb-2">
+                            Weekend Normal (di luar 16:00 - 22:00)
+                        </label>
+                        <div class="flex items-center">
+                            <span class="text-gray-500 mr-2">Rp</span>
+                            <input 
+                                type="number" 
+                                id="harga_weekend" 
+                                name="harga_weekend" 
+                                class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 @error('harga_weekend') border-red-500 @enderror"
+                                value="{{ old('harga_weekend', $court->harga_weekend) }}"
+                                min="1"
+                                required
+                            >
+                        </div>
+                        @error('harga_weekend')
+                            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div class="mb-6">
+                        <label for="harga_weekend_prime" class="block text-gray-700 font-bold mb-2">
+                            Weekend Prime Time (16:00 - 22:00)
+                        </label>
+                        <div class="flex items-center">
+                            <span class="text-gray-500 mr-2">Rp</span>
+                            <input 
+                                type="number" 
+                                id="harga_weekend_prime" 
+                                name="harga_weekend_prime" 
+                                class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 @error('harga_weekend_prime') border-red-500 @enderror"
+                                value="{{ old('harga_weekend_prime', $court->harga_weekend_prime) }}"
+                                min="1"
+                                required
+                            >
+                        </div>
+                        @error('harga_weekend_prime')
+                            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                        @enderror
+                    </div>
+
                     <div class="bg-gray-50 p-4 rounded-lg mb-6">
                         <p class="text-sm text-gray-600">
-                            <strong>Catatan:</strong> Harga harus dalam bentuk angka positif. Sistem akan secara otomatis menerapkan harga yang sesuai berdasarkan waktu pemesanan.
+                            <strong>Catatan:</strong> Sistem otomatis memilih harga berdasarkan hari booking dan prime time 16:00 - 22:00. Harga dapat diubah sementara untuk event sesuai persetujuan manajemen.
                         </p>
                     </div>
 

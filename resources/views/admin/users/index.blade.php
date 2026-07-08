@@ -278,7 +278,7 @@
 {{-- Header --}}
 <div class="page-header">
     <div>
-        <h1>Manajemen User</h1>
+        <h1>User Management</h1>
         <p>Master User — Kelola akun, keanggotaan, penangguhan, dan kepatuhan privasi (UU PDP)</p>
     </div>
 </div>

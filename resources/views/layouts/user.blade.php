@@ -32,37 +32,26 @@
         #user-sidebar {
             position: fixed; top: 0; left: 0;
             width: var(--sidebar-w); height: 100vh;
-            background: linear-gradient(180deg, var(--green-deep) 0%, var(--green-mid) 60%, var(--green-light) 100%);
+            background: #44664d;
             display: flex; flex-direction: column;
             z-index: 100; overflow: hidden;
         }
 
-        /* Subtle texture overlay */
-        #user-sidebar::before {
-            content: '';
-            position: absolute; inset: 0;
-            background: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E");
-            pointer-events: none;
-        }
-
         .sidebar-logo {
-            padding: 24px 20px 20px;
+            padding: 24px 16px 20px;
             border-bottom: 1px solid rgba(255,255,255,0.08);
             position: relative; z-index: 1;
         }
         .logo-box {
-            display: flex; align-items: center; gap: 10px;
+            display: flex; align-items: center;
         }
-        .logo-icon {
-            width: 42px; height: 42px;
-            background: rgba(255,255,255,0.12);
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 10px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 20px; flex-shrink: 0;
+        .brand-logo {
+            width: 168px;
+            height: auto;
+            display: block;
+            border-radius: 8px;
         }
-        .logo-text { font-family: 'DM Serif Display', serif; color: #fff; font-size: 15px; line-height: 1.25; }
-        .logo-sub  { color: rgba(255,255,255,0.4); font-size: 9px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; margin-top: 2px; }
+        .logo-icon, .logo-text, .logo-sub { display: none; }
 
         .sidebar-nav {
             flex: 1; padding: 20px 14px;
@@ -144,6 +133,7 @@
 <aside id="user-sidebar">
     <div class="sidebar-logo">
         <div class="logo-box">
+            <img src="{{ asset('images/logo padel bandeja.png') }}" alt="Bandeja Padel Arena" class="brand-logo">
             <div class="logo-icon">🏸</div>
             <div>
                 <div class="logo-text">Bandeja<br>Padel Arena.</div>

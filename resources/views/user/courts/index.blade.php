@@ -78,7 +78,10 @@
         border: 1px solid rgba(0,0,0,0.06);
     }
     .floor-plan-svg {
-        width: 100%;
+        /* Ubah nilai width di bawah ini untuk mengatur besar/kecilnya denah (misal: 100%, 80%, 75%) */
+        width: 90%;
+        max-width: 800px;
+        margin: 0 auto; /* Untuk menengahkan gambar */
         height: auto;
         display: block;
         border-radius: 8px;

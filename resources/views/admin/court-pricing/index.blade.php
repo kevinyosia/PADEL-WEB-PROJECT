@@ -17,8 +17,10 @@
                         <thead class="bg-gray-100">
                             <tr>
                                 <th class="border border-gray-300 px-4 py-2 text-left">Nama Lapangan</th>
-                                <th class="border border-gray-300 px-4 py-2 text-right">Harga Pagi - Tengah Malam</th>
-                                <th class="border border-gray-300 px-4 py-2 text-right">Harga Malam (18:00+)</th>
+                                <th class="border border-gray-300 px-4 py-2 text-right">Weekday Normal</th>
+                                <th class="border border-gray-300 px-4 py-2 text-right">Weekday Prime (16:00-22:00)</th>
+                                <th class="border border-gray-300 px-4 py-2 text-right">Weekend Normal</th>
+                                <th class="border border-gray-300 px-4 py-2 text-right">Weekend Prime (16:00-22:00)</th>
                                 <th class="border border-gray-300 px-4 py-2 text-center">Status</th>
                                 <th class="border border-gray-300 px-4 py-2 text-center">Aksi</th>
                             </tr>
@@ -29,6 +31,8 @@
                                     <td class="border border-gray-300 px-4 py-2">{{ $court->nama_lapangan }}</td>
                                     <td class="border border-gray-300 px-4 py-2 text-right">Rp {{ number_format($court->harga_pagi_tengahmalam, 0, ',', '.') }}</td>
                                     <td class="border border-gray-300 px-4 py-2 text-right">Rp {{ number_format($court->harga_malam, 0, ',', '.') }}</td>
+                                    <td class="border border-gray-300 px-4 py-2 text-right">Rp {{ number_format($court->harga_weekend, 0, ',', '.') }}</td>
+                                    <td class="border border-gray-300 px-4 py-2 text-right">Rp {{ number_format($court->harga_weekend_prime, 0, ',', '.') }}</td>
                                     <td class="border border-gray-300 px-4 py-2 text-center">
                                         <span class="px-2 py-1 rounded text-sm {{ $court->status === 'tersedia' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
                                             {{ ucfirst($court->status) }}
@@ -40,7 +44,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="border border-gray-300 px-4 py-2 text-center text-gray-500">
+                                    <td colspan="7" class="border border-gray-300 px-4 py-2 text-center text-gray-500">
                                         Tidak ada lapangan yang ditemukan
                                     </td>
                                 </tr>
