@@ -53,10 +53,10 @@ class MembershipController extends Controller
             ],
             'item_details' => [
                 [
-                    'id' => 'membership-elite-pass',
+                    'id' => 'membership-pass',
                     'price' => $amount,
                     'quantity' => 1,
-                    'name' => 'The Elite Pass - Lifetime Membership',
+                    'name' => 'Bandeja Member Pass - Lifetime Membership',
                 ],
             ],
         ];

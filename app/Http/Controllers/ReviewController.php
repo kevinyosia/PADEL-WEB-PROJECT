@@ -23,13 +23,25 @@ class ReviewController extends Controller
             ->orderBy('tanggal_booking', 'desc')
             ->get();
 
+        $reviewedCoachReservationIds = CoachReview::where('user_id', $user->id)
+            ->whereNotNull('reservation_id')
+            ->pluck('reservation_id');
+
+        $coachReservations = Reservation::with(['court', 'coach.user'])
+            ->where('user_id', $user->id)
+            ->where('status_reservasi', 'completed')
+            ->whereNotNull('coach_id')
+            ->whereNotIn('id', $reviewedCoachReservationIds)
+            ->orderBy('tanggal_booking', 'desc')
+            ->get();
+
         // Review yang sudah ditulis user ini
         $myFeedbacks = Feedback::with(['reservation.court'])
             ->where('user_id', $user->id)
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $myCoachReviews = CoachReview::with(['coach.user'])
+        $myCoachReviews = CoachReview::with(['coach.user', 'reservation.court'])
             ->where('user_id', $user->id)
             ->orderBy('created_at', 'desc')
             ->get();
@@ -39,7 +51,7 @@ class ReviewController extends Controller
         $totalReviews = Feedback::count();
 
         return view('user.reviews.index', compact(
-            'reservations', 'myFeedbacks', 'myCoachReviews',
+            'reservations', 'coachReservations', 'myFeedbacks', 'myCoachReviews',
             'avgRating', 'totalReviews'
         ));
     }

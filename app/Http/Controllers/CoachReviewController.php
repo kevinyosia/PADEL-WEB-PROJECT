@@ -11,13 +11,11 @@ use Illuminate\View\View;
 
 class CoachReviewController extends Controller
 {
-    /**
-     * Get coach reviews with stats
-     */
+    
     public function getCoachReviews(Coach $coach)
     {
         $reviews = $coach->reviews()
-            ->with('user')
+            ->with('user:id,name')
             ->latest()
             ->get();
 
@@ -34,12 +32,10 @@ class CoachReviewController extends Controller
         ]);
     }
 
-    /**
-     * Store a new coach review
-     */
+   
     public function store(Request $request, Coach $coach)
     {
-        // Validate input
+        
         $validated = $request->validate([
             'rating' => 'required|integer|min:1|max:5',
             'review' => 'nullable|string|max:500',
@@ -48,7 +44,7 @@ class CoachReviewController extends Controller
 
         $user = auth()->user();
 
-        // Check if user has booked with this coach
+        
         $hasBooked = Reservation::where('user_id', $user->id)
             ->where('coach_id', $coach->id)
             ->exists();
@@ -59,7 +55,7 @@ class CoachReviewController extends Controller
             ], 403);
         }
 
-        // Optional: Check if reviewing specific reservation
+        
         if ($request->filled('reservation_id')) {
             $reservation = Reservation::where('id', $validated['reservation_id'])
                 ->where('user_id', $user->id)
@@ -83,7 +79,7 @@ class CoachReviewController extends Controller
             $validated['reservation_id'] = $reservation->id;
         }
 
-        // Create review
+        
         $review = $user->coachReviews()->create([
             'coach_id' => $coach->id,
             'rating' => $validated['rating'],
@@ -93,13 +89,11 @@ class CoachReviewController extends Controller
 
         return response()->json([
             'message' => 'Review berhasil ditambahkan!',
-            'review' => $review->load('user'),
+            'review' => $review->load('user:id,name'),
         ], 201);
     }
 
-    /**
-     * Get rating distribution (helper for stats)
-     */
+    
     private function getRatingDistribution($reviews)
     {
         $distribution = [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0];
@@ -111,12 +105,10 @@ class CoachReviewController extends Controller
         return $distribution;
     }
 
-    /**
-     * Delete own review (if feature is added later)
-     */
+    
     public function destroy(CoachReview $review)
     {
-        // Only review owner can delete
+        
         if ($review->user_id !== auth()->id()) {
             return response()->json([
                 'error' => 'Anda tidak memiliki akses untuk menghapus review ini.',

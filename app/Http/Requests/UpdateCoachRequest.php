@@ -6,6 +6,8 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateCoachRequest extends FormRequest
 {
+    private const SCHEDULE_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -25,12 +27,37 @@ class UpdateCoachRequest extends FormRequest
             'availability_status' => ['required', 'in:active,inactive,on_leave'],
             'photo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:5120'], // max 5MB, optional
             'schedule' => ['required', 'array'],
-            'schedule.mon' => ['required', 'boolean'],
-            'schedule.tue' => ['required', 'boolean'],
-            'schedule.wed' => ['required', 'boolean'],
-            'schedule.thu' => ['required', 'boolean'],
-            'schedule.fri' => ['required', 'boolean'],
+            'schedule.mon' => ['nullable', 'boolean'],
+            'schedule.tue' => ['nullable', 'boolean'],
+            'schedule.wed' => ['nullable', 'boolean'],
+            'schedule.thu' => ['nullable', 'boolean'],
+            'schedule.fri' => ['nullable', 'boolean'],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $schedule = $this->input('schedule', []);
+
+        foreach (self::SCHEDULE_DAYS as $day) {
+            $schedule[$day] = filter_var($schedule[$day] ?? false, FILTER_VALIDATE_BOOLEAN);
+        }
+
+        $this->merge(['schedule' => $schedule]);
+    }
+
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            $selectedDays = collect($this->input('schedule', []))
+                ->only(self::SCHEDULE_DAYS)
+                ->filter()
+                ->count();
+
+            if ($selectedDays < 1) {
+                $validator->errors()->add('schedule', 'Pilih minimal 1 hari jadwal coach');
+            }
+        });
     }
 
     /**
