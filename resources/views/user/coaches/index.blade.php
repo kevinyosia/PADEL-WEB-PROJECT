@@ -62,7 +62,12 @@
     .coach-meta { display: flex; align-items: center; gap: 14px; }
     .coach-rating { display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; color: var(--text-dark); }
     .star { color: var(--gold); font-size: 14px; }
-    .rating-count { font-size: 11px; color: var(--text-muted); font-weight: 600; }
+    .rating-count {
+        border: 0; background: none; padding: 0; font: inherit;
+        font-size: 11px; color: var(--text-muted); font-weight: 600;
+        cursor: pointer; text-decoration: none;
+    }
+    .rating-count:hover { color: var(--green-deep); text-decoration: underline; }
     .coach-rate { font-size: 15px; font-weight: 800; color: var(--text-dark); }
     .per-sesi { font-size: 11px; color: var(--text-muted); font-weight: 600; }
 
@@ -103,6 +108,47 @@
     .empty-state { text-align: center; padding: 64px 20px; }
     .empty-state .e-icon { font-size: 40px; margin-bottom: 10px; }
     .empty-state p { color: var(--text-muted); font-size: 14px; }
+
+    .reviews-modal-overlay {
+        display: none; position: fixed; inset: 0; z-index: 9000;
+        background: rgba(15, 23, 42, 0.42); padding: 24px;
+        align-items: center; justify-content: center;
+    }
+    .reviews-modal-overlay.show { display: flex; }
+    .reviews-modal {
+        width: min(620px, 100%); max-height: min(720px, 90vh);
+        background: var(--cream-card); border-radius: 16px;
+        border: 1px solid rgba(0,0,0,0.08);
+        box-shadow: 0 24px 80px rgba(0,0,0,0.22);
+        display: flex; flex-direction: column; overflow: hidden;
+    }
+    .reviews-modal-head {
+        display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;
+        padding: 22px 24px 16px; border-bottom: 1px solid rgba(0,0,0,0.08);
+    }
+    .reviews-modal-title { font-size: 18px; font-weight: 800; color: var(--text-dark); }
+    .reviews-modal-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    .reviews-modal-close {
+        width: 32px; height: 32px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.12);
+        background: var(--cream-bg); color: var(--text-dark); cursor: pointer; font-size: 20px; line-height: 1;
+    }
+    .reviews-modal-body { padding: 18px 24px 24px; overflow-y: auto; }
+    .coach-review-item { padding: 14px 0; border-bottom: 1px solid rgba(0,0,0,0.08); }
+    .coach-review-item:last-child { border-bottom: 0; }
+    .coach-review-row { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 8px; }
+    .coach-review-user { font-size: 14px; font-weight: 800; color: var(--text-dark); }
+    .coach-review-date { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+    .coach-review-stars { color: var(--gold); font-size: 13px; letter-spacing: 1px; margin-bottom: 6px; }
+    .coach-review-text { font-size: 13px; color: var(--text-muted); line-height: 1.55; }
+    .reviews-modal-empty { padding: 42px 12px; text-align: center; color: var(--text-muted); font-size: 14px; }
+    .reviews-modal-loading { padding: 34px 12px; text-align: center; color: var(--text-muted); font-size: 14px; }
+
+    @media (max-width: 720px) {
+        .page-wrap { padding: 22px 18px; }
+        .coach-card { align-items: flex-start; }
+        .coach-meta { align-items: flex-start; flex-direction: column; gap: 8px; }
+        .reviews-modal-overlay { padding: 16px; }
+    }
 </style>
 @endpush
 
@@ -150,7 +196,14 @@
                     <span class="coach-rating">
                         <span class="star">★</span>
                         {{ $avgRating > 0 ? number_format($avgRating,1) : '—' }}
-                        <span class="rating-count">| {{ $reviewCount }} Reviews</span>
+                        <button
+                            type="button"
+                            class="rating-count"
+                            data-coach-id="{{ $coach->id }}"
+                            data-coach-name="{{ $coach->user->name ?? 'Coach' }}"
+                            data-review-url="{{ route('coach.reviews.get', $coach) }}"
+                            onclick="openCoachReviews(this)"
+                        >| {{ $reviewCount }} Reviews</button>
                     </span>
                     <span class="coach-rate">
                         Rp{{ number_format($coach->harga_per_jam,0,',','.') }}
@@ -174,10 +227,30 @@
         @endforelse
     </div>
 </div>
+
+<div class="reviews-modal-overlay" id="coachReviewsModal" onclick="closeCoachReviews(event)">
+    <div class="reviews-modal" role="dialog" aria-modal="true" aria-labelledby="coachReviewsTitle" onclick="event.stopPropagation()">
+        <div class="reviews-modal-head">
+            <div>
+                <div class="reviews-modal-title" id="coachReviewsTitle">Coach Reviews</div>
+                <div class="reviews-modal-sub" id="coachReviewsSummary">Memuat review...</div>
+            </div>
+            <button type="button" class="reviews-modal-close" onclick="closeCoachReviews()">&times;</button>
+        </div>
+        <div class="reviews-modal-body" id="coachReviewsBody">
+            <div class="reviews-modal-loading">Memuat review...</div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('scripts')
 <script>
+const coachReviewsModal = document.getElementById('coachReviewsModal');
+const coachReviewsTitle = document.getElementById('coachReviewsTitle');
+const coachReviewsSummary = document.getElementById('coachReviewsSummary');
+const coachReviewsBody = document.getElementById('coachReviewsBody');
+
 function filterCoaches(filter, el) {
     document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
     el.classList.add('active');
@@ -186,5 +259,78 @@ function filterCoaches(filter, el) {
         card.style.display = match ? '' : 'none';
     });
 }
+
+async function openCoachReviews(button) {
+    const coachName = button.dataset.coachName || 'Coach';
+    coachReviewsTitle.textContent = `Review ${coachName}`;
+    coachReviewsSummary.textContent = 'Memuat review...';
+    coachReviewsBody.innerHTML = '<div class="reviews-modal-loading">Memuat review...</div>';
+    coachReviewsModal.classList.add('show');
+
+    try {
+        const response = await fetch(button.dataset.reviewUrl, {
+            headers: { 'Accept': 'application/json' }
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Review coach gagal dimuat.');
+        }
+
+        const total = data.stats?.total ?? data.reviews.length;
+        const average = data.stats?.average ?? 0;
+        coachReviewsSummary.textContent = total > 0
+            ? `${average}/5 dari ${total} review`
+            : 'Belum ada review untuk coach ini.';
+
+        if (!data.reviews.length) {
+            coachReviewsBody.innerHTML = '<div class="reviews-modal-empty">Belum ada user yang memberikan review untuk coach ini.</div>';
+            return;
+        }
+
+        coachReviewsBody.innerHTML = data.reviews.map((review) => {
+            const rating = Number(review.rating || 0);
+            const filled = '★'.repeat(rating);
+            const empty = '☆'.repeat(5 - rating);
+            const userName = escapeHtml(review.user?.name || 'Member');
+            const comment = escapeHtml(review.review || 'Tidak ada komentar.');
+            const date = review.created_at ? new Date(review.created_at).toLocaleDateString('id-ID', {
+                day: '2-digit', month: 'short', year: 'numeric'
+            }) : '';
+
+            return `
+                <div class="coach-review-item">
+                    <div class="coach-review-row">
+                        <div class="coach-review-user">${userName}</div>
+                        <div class="coach-review-date">${date}</div>
+                    </div>
+                    <div class="coach-review-stars">${filled}${empty}</div>
+                    <div class="coach-review-text">${comment}</div>
+                </div>
+            `;
+        }).join('');
+    } catch (error) {
+        coachReviewsSummary.textContent = 'Review tidak bisa dimuat.';
+        coachReviewsBody.innerHTML = `<div class="reviews-modal-empty">${escapeHtml(error.message)}</div>`;
+    }
+}
+
+function closeCoachReviews(event) {
+    if (event && event.target !== coachReviewsModal) return;
+    coachReviewsModal.classList.remove('show');
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeCoachReviews();
+});
 </script>
 @endpush

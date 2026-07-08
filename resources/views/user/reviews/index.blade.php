@@ -32,6 +32,14 @@
         border: 1px solid rgba(0,0,0,0.06);
     }
     .review-card-title { font-size: 22px; font-weight: 800; color: var(--text-dark); text-align: center; margin-bottom: 22px; letter-spacing: .02em; }
+    .review-card-subtitle { margin: -12px auto 22px; max-width: 520px; text-align: center; color: var(--text-muted); font-size: 13px; line-height: 1.5; }
+    .coach-review-card { margin-top: -8px; }
+    .helper-box {
+        background: #FEF3CD; border: 1px solid #FFE69C; border-radius: 10px;
+        padding: 16px; margin-bottom: 18px; font-size: 13px; color: #856404; text-align: center; line-height: 1.5;
+    }
+    .review-error { display: none; font-size: 12px; color: #C0392B; margin-top: 8px; }
+    .review-error.show { display: block; }
 
     /* Star rows */
     .star-rows { border-top: 1px solid rgba(0,0,0,0.08); }
@@ -87,6 +95,7 @@
         cursor: pointer; transition: all .18s;
     }
     .submit-btn:hover { background: var(--green-mid); }
+    .submit-btn:disabled { background: #C5C0B0; cursor: wait; }
 
     /* WhatsApp */
     .wa-section { text-align: center; margin-top: 20px; }
@@ -123,6 +132,17 @@
     .ri-date   { font-size: 11px; color: var(--text-muted); }
     .ri-stars  { color: var(--gold); font-size: 13px; letter-spacing: 1px; margin-bottom: 6px; }
     .ri-comment{ font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+    .ri-kind {
+        display: inline-flex; align-items: center; margin-right: 8px; padding: 3px 8px;
+        border-radius: 999px; background: rgba(58,92,40,0.12); color: var(--green-deep);
+        font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em;
+    }
+    @media (max-width: 720px) {
+        .review-topbar { padding: 20px 18px 16px; flex-direction: column; gap: 12px; }
+        .review-card, .my-reviews-section { margin-left: 18px; margin-right: 18px; padding: 22px 18px; }
+        .star-row { align-items: flex-start; flex-direction: column; gap: 10px; }
+        .ri-header { align-items: flex-start; flex-direction: column; gap: 4px; }
+    }
 </style>
 @endpush
 
@@ -219,6 +239,68 @@
         </div>
     </div>
 
+    {{-- Coach Review Form --}}
+    <div class="review-card coach-review-card">
+        <div class="review-card-title">REVIEW COACH</div>
+        <div class="review-card-subtitle">Berikan ulasan untuk coach berdasarkan sesi booking yang sudah selesai.</div>
+
+        @if($coachReservations->count())
+        <form id="coachReviewForm" data-url-template="{{ route('coach.reviews.store', ['coach' => '__COACH_ID__']) }}">
+            @csrf
+
+            <div class="reservation-select-wrap">
+                <label class="res-label" for="coach_reservation_id">Booking Coach</label>
+                <select name="reservation_id" id="coach_reservation_id" class="res-select" required>
+                    <option value="">Pilih booking coach Anda...</option>
+                    @foreach($coachReservations as $res)
+                    <option
+                        value="{{ $res->id }}"
+                        data-coach-id="{{ $res->coach_id }}"
+                        data-coach-name="{{ $res->coach->user->name ?? 'Coach' }}"
+                    >
+                        Coach {{ $res->coach->user->name ?? 'Coach' }} &middot;
+                        {{ $res->court->nama_lapangan ?? 'Lapangan' }} &middot;
+                        {{ \Carbon\Carbon::parse($res->tanggal_booking)->format('d M Y') }} &middot;
+                        {{ $res->jam_mulai }}-{{ $res->jam_selesai }}
+                    </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="star-rows">
+                <div class="star-row">
+                    <span class="star-row-label">Rating Coach</span>
+                    <div class="star-input">
+                        @for($s = 5; $s >= 1; $s--)
+                        <input type="radio" id="coach_rating_{{ $s }}" name="rating" value="{{ $s }}">
+                        <label for="coach_rating_{{ $s }}">&#9733;</label>
+                        @endfor
+                    </div>
+                </div>
+            </div>
+
+            <div class="review-textarea-wrap">
+                <label class="review-textarea-label" for="coach_review">Tulis Ulasan Coach</label>
+                <textarea
+                    id="coach_review" name="review"
+                    class="review-textarea"
+                    placeholder="Ceritakan pengalaman latihan dengan coach..."
+                    rows="4"
+                    maxlength="500"
+                ></textarea>
+                <div class="review-error" id="coachReviewError"></div>
+            </div>
+
+            <button type="submit" class="submit-btn" id="coachReviewSubmit">Submit Review Coach</button>
+        </form>
+        @else
+        <div class="helper-box">
+            <strong>Belum ada booking coach yang bisa direview</strong><br>
+            Review coach akan tersedia setelah Anda menyelesaikan booking dengan coach, atau jika semua booking coach sudah pernah direview.
+        </div>
+        @endif
+    </div>
+
     {{-- My reviews list --}}
     @if($myFeedbacks->count() || $myCoachReviews->count())
     <div class="my-reviews-section">
@@ -227,7 +309,7 @@
         @foreach($myFeedbacks as $fb)
         <div class="review-item">
             <div class="ri-header">
-                <span class="ri-target">{{ $fb->reservation->court->nama_lapangan ?? 'Lapangan' }}</span>
+                <span class="ri-target"><span class="ri-kind">Lapangan</span>{{ $fb->reservation->court->nama_lapangan ?? 'Lapangan' }}</span>
                 <span class="ri-date">{{ \Carbon\Carbon::parse($fb->created_at)->format('d M Y') }}</span>
             </div>
             <div class="ri-stars">{{ str_repeat('★', $fb->rating) }}{{ str_repeat('☆', 5 - $fb->rating) }}</div>
@@ -244,6 +326,12 @@
                 <span class="ri-date">{{ \Carbon\Carbon::parse($cr->created_at)->format('d M Y') }}</span>
             </div>
             <div class="ri-stars">{{ str_repeat('★', $cr->rating) }}{{ str_repeat('☆', 5 - $cr->rating) }}</div>
+            @if($cr->reservation)
+            <div class="ri-comment" style="margin-bottom:6px;">
+                {{ $cr->reservation->court->nama_lapangan ?? 'Lapangan' }} &middot;
+                {{ \Carbon\Carbon::parse($cr->reservation->tanggal_booking)->format('d M Y') }}
+            </div>
+            @endif
             @if($cr->review)
             <div class="ri-comment">{{ $cr->review }}</div>
             @endif
@@ -266,3 +354,77 @@
 </div>
 @endif
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('coachReviewForm');
+    if (!form) return;
+
+    const select = document.getElementById('coach_reservation_id');
+    const submitButton = document.getElementById('coachReviewSubmit');
+    const errorBox = document.getElementById('coachReviewError');
+    const token = document.querySelector('meta[name="csrf-token"]')?.content;
+
+    const setError = (message) => {
+        errorBox.textContent = message;
+        errorBox.classList.toggle('show', Boolean(message));
+    };
+
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        setError('');
+
+        const selectedOption = select.options[select.selectedIndex];
+        const coachId = selectedOption?.dataset.coachId;
+        const rating = form.querySelector('input[name="rating"]:checked')?.value;
+        const review = document.getElementById('coach_review').value.trim();
+
+        if (!select.value || !coachId) {
+            setError('Pilih booking coach yang ingin direview.');
+            return;
+        }
+
+        if (!rating) {
+            setError('Pilih rating coach terlebih dahulu.');
+            return;
+        }
+
+        submitButton.disabled = true;
+        submitButton.textContent = 'Mengirim...';
+
+        try {
+            const url = form.dataset.urlTemplate.replace('__COACH_ID__', coachId);
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': token,
+                },
+                body: JSON.stringify({
+                    reservation_id: select.value,
+                    rating,
+                    review,
+                }),
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                throw new Error(data.error || data.message || 'Review coach gagal dikirim.');
+            }
+
+            showToast('success', data.message || 'Review coach berhasil dikirim.');
+            setTimeout(() => window.location.reload(), 900);
+        } catch (error) {
+            setError(error.message);
+            showToast('error', error.message);
+        } finally {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Submit Review Coach';
+        }
+    });
+});
+</script>
+@endpush
