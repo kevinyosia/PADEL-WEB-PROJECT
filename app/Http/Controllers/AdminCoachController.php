@@ -63,7 +63,7 @@ class AdminCoachController extends Controller
             $photoPath = $this->uploadFile($request->file('photo'), 'photos/coaches');
         }
 
-        // Create coach record
+        
         Coach::create([
             'user_id' => $user->id,
             'deskripsi_keahlian' => $validated['deskripsi_keahlian'],
