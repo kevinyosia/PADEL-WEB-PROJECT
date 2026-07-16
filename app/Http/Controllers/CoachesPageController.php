@@ -11,16 +11,6 @@ use Illuminate\View\View;
 
 class CoachesPageController extends Controller
 {
-    private const DAY_MAP = [
-        0 => 'sun',
-        1 => 'mon',
-        2 => 'tue',
-        3 => 'wed',
-        4 => 'thu',
-        5 => 'fri',
-        6 => 'sat',
-    ];
-
     public function index(): View
     {
         $coaches = Coach::with(['user', 'reviews'])
@@ -42,7 +32,7 @@ class CoachesPageController extends Controller
     public function slots(Coach $coach, Request $request): JsonResponse
     {
         $request->validate([
-            'day' => ['required', 'in:mon,tue,wed,thu,fri,sat,sun'],
+            'day' => ['required', 'in:mon,tue,wed,thu,fri'],
             'date' => ['nullable', 'date_format:Y-m-d'],
         ]);
 

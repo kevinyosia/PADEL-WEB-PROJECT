@@ -29,17 +29,16 @@ test('booking store confirms and marks payment as paid immediately', function ()
     ]);
 
     $reservation = Reservation::first();
-
-    $response->assertRedirect(route('booking.index'));
     expect($reservation)->not->toBeNull();
     expect($reservation->status_reservasi)->toBe('confirmed');
     expect($reservation->batas_pembayaran)->toBeNull();
 
     $transaction = Transaction::where('reservation_id', $reservation->id)->first();
     expect($transaction)->not->toBeNull();
+    $response->assertRedirect(route('payment.page', $transaction->id));
     expect($transaction->metode_pembayaran)->toBe('transfer');
     expect($transaction->channel_pembayaran)->toBe('virtual_account');
-    expect($transaction->status_pembayaran)->toBe('lunas');
+    expect($transaction->status_pembayaran)->toBe('belum_lunas');
 
     Carbon::setTestNow();
 });

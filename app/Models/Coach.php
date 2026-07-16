@@ -20,6 +20,8 @@ class Coach extends Model
 {
     use HasFactory;
 
+    public const SCHEDULE_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
+
     protected $fillable = [
         'user_id',
         'deskripsi_keahlian',
@@ -144,6 +146,20 @@ class Coach extends Model
     {
         foreach ($this->getSessionsForDay($day) as $session) {
             if ($time >= $session['start'] && $time < $session['end']) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Check whether a time range is fully contained in one session slot for a day.
+     */
+    public function isRangeWithinAnySession(string $day, string $start, string $end): bool
+    {
+        foreach ($this->getSessionsForDay($day) as $session) {
+            if ($start >= $session['start'] && $end <= $session['end'] && $start < $end) {
                 return true;
             }
         }

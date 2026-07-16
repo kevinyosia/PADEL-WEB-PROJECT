@@ -93,6 +93,59 @@
             box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
         }
 
+        .session-day-card {
+            border: 1px solid #E2E8F0;
+            border-radius: 10px;
+            background: #F8FAFC;
+            padding: 12px;
+        }
+        .session-day-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .session-day-title {
+            font-size: 12px;
+            font-weight: 800;
+            color: #334155;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        .session-rows {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .session-row {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr auto;
+            gap: 8px;
+            align-items: center;
+        }
+        .session-sep {
+            font-size: 12px;
+            color: #64748B;
+            font-weight: 700;
+        }
+        .btn-mini {
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            border: 1px solid #CBD5E1;
+            background: #fff;
+            color: #334155;
+            cursor: pointer;
+        }
+        .btn-mini:hover { background: #F1F5F9; }
+        .btn-mini.danger {
+            border-color: #FECACA;
+            color: #B91C1C;
+            background: #FFF1F2;
+        }
+        .btn-mini.danger:hover { background: #FFE4E6; }
+
         /* Form actions */
         .form-actions {
             padding: 20px 28px;
@@ -339,26 +392,48 @@
                         </div>
                     @enderror
 
-                    <div class="schedule-grid">
-                        @foreach(['mon'=>'Sen','tue'=>'Sel','wed'=>'Rab','thu'=>'Kam','fri'=>'Jum'] as $key => $label)
-                            <div class="day-checkbox-wrap">
-                                <span class="day-checkbox-label">{{ $label }}</span>
-                                <input
-                                    type="checkbox"
-                                    id="schedule_{{ $key }}"
-                                    name="schedule[{{ $key }}]"
-                                    value="1"
-                                    class="day-checkbox"
-                                    {{ old("schedule.$key") ? 'checked' : '' }}
-                                    onchange="this.nextElementSibling.classList.toggle('checked-style', this.checked)"
-                                >
-                                <label for="schedule_{{ $key }}" class="day-checkbox-btn">
-                                    {{ strtoupper($key[0]) }}
-                                </label>
+                    <div style="display:grid;grid-template-columns:1fr;gap:10px;">
+                        @foreach(['mon'=>'Senin','tue'=>'Selasa','wed'=>'Rabu','thu'=>'Kamis','fri'=>'Jumat'] as $key => $label)
+                            @php
+                                $oldDay = old("schedule.$key");
+                                $isActive = is_array($oldDay) ? (bool) ($oldDay['active'] ?? false) : (bool) $oldDay;
+                                $sessions = is_array($oldDay) ? ($oldDay['sessions'] ?? []) : [];
+                                if ($isActive && empty($sessions)) {
+                                    $sessions = [['start' => '', 'end' => '']];
+                                }
+                            @endphp
+                            <div class="session-day-card" data-day-card="{{ $key }}">
+                                <div class="session-day-head">
+                                    <div class="session-day-title">{{ $label }}</div>
+                                    <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#475569;">
+                                        <input type="checkbox" id="schedule_{{ $key }}_active" name="schedule[{{ $key }}][active]" value="1" {{ $isActive ? 'checked' : '' }} onchange="toggleDaySessions('{{ $key }}')">
+                                        Aktif
+                                    </label>
+                                </div>
+
+                                <div id="sessionsWrap_{{ $key }}" style="{{ $isActive ? '' : 'display:none;' }}">
+                                    <div class="session-rows" id="sessions_{{ $key }}">
+                                        @foreach($sessions as $idx => $session)
+                                            <div class="session-row" data-session-row>
+                                                <input type="time" class="field-input" value="{{ $session['start'] ?? '' }}" data-field="start">
+                                                <span class="session-sep">-</span>
+                                                <input type="time" class="field-input" value="{{ $session['end'] ?? '' }}" data-field="end">
+                                                <button type="button" class="btn-mini danger" onclick="removeSessionRow(this, '{{ $key }}')">Hapus</button>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                    <div style="margin-top:8px;">
+                                        <button type="button" class="btn-mini" onclick="addSessionRow('{{ $key }}')">+ Tambah Session</button>
+                                        <span class="field-hint" style="margin-left:8px;">Maksimal 3 session, durasi 1-4 jam per session.</span>
+                                    </div>
+                                    @error("schedule.$key.sessions")
+                                        <div class="field-error" style="margin-top:6px;">⚠ {{ $message }}</div>
+                                    @enderror
+                                </div>
                             </div>
                         @endforeach
                     </div>
-                    <p class="field-hint" style="margin-top:10px;">Pilih hari kerja coach. Minimal 1 hari.</p>
+                    <p class="field-hint" style="margin-top:10px;">Admin dapat mengatur session berbeda untuk setiap hari dan setiap coach.</p>
                 </div>
 
                 {{-- Actions --}}
@@ -398,17 +473,86 @@
             reader.readAsDataURL(file);
         });
 
-        // Sync hidden boolean inputs karena Laravel butuh nilai false juga
-        // (checkbox unchecked tidak terkirim, tapi StoreCoachRequest butuh 'required, boolean')
+        const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
+
+        function syncDaySessionNames(day) {
+            const wrap = document.getElementById(`sessions_${day}`);
+            if (!wrap) return;
+
+            const active = document.getElementById(`schedule_${day}_active`);
+            const isActive = !!active && active.checked;
+
+            const rows = wrap.querySelectorAll('[data-session-row]');
+            rows.forEach((row, index) => {
+                const start = row.querySelector('[data-field="start"]');
+                const end = row.querySelector('[data-field="end"]');
+
+                if (!isActive) {
+                    start.removeAttribute('name');
+                    end.removeAttribute('name');
+                    return;
+                }
+
+                start.name = `schedule[${day}][sessions][${index}][start]`;
+                end.name = `schedule[${day}][sessions][${index}][end]`;
+            });
+        }
+
+        function toggleDaySessions(day) {
+            const active = document.getElementById(`schedule_${day}_active`);
+            const wrap = document.getElementById(`sessionsWrap_${day}`);
+            if (!active || !wrap) return;
+
+            wrap.style.display = active.checked ? '' : 'none';
+
+            if (active.checked && wrap.querySelectorAll('[data-session-row]').length === 0) {
+                addSessionRow(day);
+            }
+
+            syncDaySessionNames(day);
+        }
+
+        function addSessionRow(day) {
+            const wrap = document.getElementById(`sessions_${day}`);
+            if (!wrap) return;
+
+            const current = wrap.querySelectorAll('[data-session-row]').length;
+            if (current >= 3) {
+                alert('Maksimal 3 session per hari.');
+                return;
+            }
+
+            const row = document.createElement('div');
+            row.className = 'session-row';
+            row.setAttribute('data-session-row', '1');
+            row.innerHTML = `
+                <input type="time" class="field-input" data-field="start">
+                <span class="session-sep">-</span>
+                <input type="time" class="field-input" data-field="end">
+                <button type="button" class="btn-mini danger" onclick="removeSessionRow(this, '${day}')">Hapus</button>
+            `;
+            wrap.appendChild(row);
+            syncDaySessionNames(day);
+        }
+
+        function removeSessionRow(button, day) {
+            const row = button.closest('[data-session-row]');
+            if (!row) return;
+            row.remove();
+            syncDaySessionNames(day);
+        }
+
+        DAY_KEYS.forEach(syncDaySessionNames);
+
         document.querySelector('form').addEventListener('submit', function() {
-            const days = ['mon','tue','wed','thu','fri'];
-            days.forEach(day => {
-                const cb = document.getElementById('schedule_' + day);
-                // Inject hidden input 0 jika unchecked
-                if (!cb.checked) {
+            DAY_KEYS.forEach(day => {
+                syncDaySessionNames(day);
+
+                const active = document.getElementById(`schedule_${day}_active`);
+                if (!active || !active.checked) {
                     const hidden = document.createElement('input');
                     hidden.type = 'hidden';
-                    hidden.name = `schedule[${day}]`;
+                    hidden.name = `schedule[${day}][active]`;
                     hidden.value = '0';
                     this.appendChild(hidden);
                 }

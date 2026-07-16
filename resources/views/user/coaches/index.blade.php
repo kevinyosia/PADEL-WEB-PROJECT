@@ -71,44 +71,70 @@
     .coach-rate { font-size: 15px; font-weight: 800; color: var(--text-dark); }
     .per-sesi { font-size: 11px; color: var(--text-muted); font-weight: 600; }
 
-    /* Schedule days row */
-    .sched-days-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-
-    /* Each active day = pill + Check button grouped */
-    .sched-day-group { position: relative; display: inline-flex; align-items: center; gap: 3px; }
-
-    .sched-day {
-        width: 24px; height: 24px; border-radius: 6px;
-        font-size: 9px; font-weight: 800; text-transform: uppercase;
-        display: flex; align-items: center; justify-content: center;
+    .coach-actions {
+        position: relative;
+        margin-left: auto;
+        flex-shrink: 0;
     }
-    .sched-on  { background: #D6EDCC; color: var(--green-deep); }
-    .sched-off { background: #E8E3D3; color: #B0AA98; }
+    .coach-days-hint {
+        font-size: 11px;
+        color: var(--text-muted);
+        font-weight: 600;
+    }
 
-    /* Check button — only shown for active days */
     .check-btn {
-        height: 18px; padding: 0 6px;
+        height: 34px;
+        padding: 0 14px;
         background: var(--green-deep); color: #fff;
-        border: none; border-radius: 4px;
-        font-size: 9px; font-weight: 800; letter-spacing: .03em;
+        border: none; border-radius: 8px;
+        font-size: 11px; font-weight: 800; letter-spacing: .03em;
         cursor: pointer; transition: background .15s;
-        display: inline-flex; align-items: center; gap: 2px;
+        display: inline-flex; align-items: center; gap: 6px;
         white-space: nowrap;
     }
     .check-btn:hover { background: var(--green-mid); }
     .check-btn .chev { transition: transform .2s; display: inline-block; }
     .check-btn.open .chev { transform: rotate(180deg); }
 
-    /* Slot dropdown */
     .slot-dropdown {
         display: none;
-        position: absolute; top: calc(100% + 6px); left: 0; z-index: 200;
+        position: absolute; top: calc(100% + 8px); right: 0; z-index: 200;
         background: #fff; border: 1px solid rgba(0,0,0,0.10);
         border-radius: 12px; padding: 12px;
         box-shadow: 0 8px 28px rgba(0,0,0,0.14);
-        min-width: 200px;
+        min-width: 250px;
     }
     .slot-dropdown.open { display: block; }
+
+    .slot-day-nav {
+        display: grid;
+        grid-template-columns: 28px 1fr 28px;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+    .slot-day-arrow {
+        width: 28px;
+        height: 28px;
+        border-radius: 7px;
+        border: 1px solid #D6D3CA;
+        background: #F8F7F2;
+        font-size: 14px;
+        color: #475569;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .slot-day-arrow:hover { background: #F1EFE7; }
+    .slot-day-label {
+        font-size: 11px;
+        font-weight: 800;
+        text-align: center;
+        color: var(--text-dark);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
     .slot-dropdown-title {
         font-size: 10px; font-weight: 800; text-transform: uppercase;
         letter-spacing: .06em; color: var(--text-muted); margin-bottom: 8px;
@@ -137,16 +163,6 @@
     .slot-empty   { font-size: 12px; color: var(--text-muted); padding: 8px 0; text-align: center; }
 
     /* Book button */
-    .book-btn {
-        padding: 11px 24px; background: var(--green-deep); color: #fff;
-        border: none; border-radius: 50px;
-        font-size: 13px; font-weight: 700; font-family: 'Figtree', sans-serif;
-        cursor: pointer; transition: all .18s; text-decoration: none;
-        white-space: nowrap; flex-shrink: 0;
-    }
-    .book-btn:hover { background: var(--green-mid); }
-    .book-btn.inactive { background: #C5C0B0; cursor: not-allowed; }
-
     .empty-state { text-align: center; padding: 64px 20px; }
     .empty-state .e-icon { font-size: 40px; margin-bottom: 10px; }
     .empty-state p { color: var(--text-muted); font-size: 14px; }
@@ -190,8 +206,10 @@
         .page-wrap { padding: 22px 18px; }
         .coach-card { align-items: flex-start; }
         .coach-meta { align-items: flex-start; flex-direction: column; gap: 8px; }
-        .reviews-modal-overlay { padding: 16px; }
+        .coach-actions { width: 100%; margin-left: 0; margin-top: 10px; }
+        .check-btn { width: 100%; justify-content: center; }
         .slot-dropdown { position: fixed; left: 16px; right: 16px; width: auto; min-width: unset; }
+        .reviews-modal-overlay { padding: 16px; }
     }
 </style>
 @endpush
@@ -216,7 +234,14 @@
         @php
             $avgRating  = $coach->reviews->avg('rating') ?? 0;
             $reviewCount = $coach->reviews->count();
-            $days = ['mon' => 'S', 'tue' => 'S', 'wed' => 'R', 'thu' => 'K', 'fri' => 'J'];
+            $dayLabels = ['mon' => 'Sen', 'tue' => 'Sel', 'wed' => 'Rab', 'thu' => 'Kam', 'fri' => 'Jum'];
+            $activeDays = [];
+            foreach ($dayLabels as $dayKey => $dayName) {
+                if ($coach->isAvailableOnDay($dayKey)) {
+                    $activeDays[] = $dayKey;
+                }
+            }
+            $activeDayNames = collect($activeDays)->map(fn ($d) => $dayLabels[$d])->values()->all();
         @endphp
         <div class="coach-card" data-status="{{ $coach->availability_status ?? 'inactive' }}" id="coachCard{{ $coach->id }}">
             <div class="coach-avatar">
@@ -254,37 +279,32 @@
                         <span class="per-sesi">/peserta/sesi</span>
                     </span>
 
-                    {{-- Schedule days with Check button per active day --}}
-                    @if(!empty($coach->schedule))
-                    <div class="sched-days-row">
-                        @foreach($days as $key => $label)
-                            @php $isOn = $coach->isAvailableOnDay($key); @endphp
-                            @if($isOn)
-                            <div class="sched-day-group" id="dayGroup_{{ $coach->id }}_{{ $key }}">
-                                <div class="sched-day sched-on">{{ $label }}</div>
-                                <button
-                                    type="button"
-                                    class="check-btn"
-                                    id="checkBtn_{{ $coach->id }}_{{ $key }}"
-                                    data-coach-id="{{ $coach->id }}"
-                                    data-day="{{ $key }}"
-                                    data-slots-url="{{ route('coaches.slots', $coach) }}"
-                                    onclick="toggleSlotDropdown(this)"
-                                >Check <span class="chev">▼</span></button>
+                    <span class="coach-days-hint">Hari aktif: {{ empty($activeDayNames) ? 'Tidak tersedia' : implode(', ', $activeDayNames) }}</span>
+                </div>
+            </div>
 
-                                <div class="slot-dropdown" id="slotDrop_{{ $coach->id }}_{{ $key }}">
-                                    <div class="slot-dropdown-title">Jam tersedia — Hari {{ strtoupper($key) }}</div>
-                                    <div class="slot-grid" id="slotGrid_{{ $coach->id }}_{{ $key }}">
-                                        <div class="slot-loading">Memuat...</div>
-                                    </div>
-                                </div>
-                            </div>
-                            @else
-                            <div class="sched-day sched-off">{{ $label }}</div>
-                            @endif
-                        @endforeach
+            <div class="coach-actions">
+                <button
+                    type="button"
+                    class="check-btn"
+                    id="checkBtn_{{ $coach->id }}"
+                    data-coach-id="{{ $coach->id }}"
+                    data-active-days="{{ implode(',', $activeDays) }}"
+                    data-slots-url="{{ route('coaches.slots', $coach) }}"
+                    onclick="toggleSlotDropdown(this)"
+                    {{ empty($activeDays) ? 'disabled style=opacity:0.5;cursor:not-allowed;' : '' }}
+                >Check <span class="chev">▼</span></button>
+
+                <div class="slot-dropdown" id="slotDrop_{{ $coach->id }}">
+                    <div class="slot-day-nav">
+                        <button type="button" class="slot-day-arrow" onclick="changeSlotDay('{{ $coach->id }}', -1)">‹</button>
+                        <div class="slot-day-label" id="slotDayLabel_{{ $coach->id }}">-</div>
+                        <button type="button" class="slot-day-arrow" onclick="changeSlotDay('{{ $coach->id }}', 1)">›</button>
                     </div>
-                    @endif
+                    <div class="slot-dropdown-title">Jam tersedia</div>
+                    <div class="slot-grid" id="slotGrid_{{ $coach->id }}">
+                        <div class="slot-loading">Memuat...</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -320,8 +340,48 @@ const coachReviewsTitle   = document.getElementById('coachReviewsTitle');
 const coachReviewsSummary = document.getElementById('coachReviewsSummary');
 const coachReviewsBody    = document.getElementById('coachReviewsBody');
 
-// Cache loaded slots per coach+day to avoid redundant fetches
+const WEEK_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
+const DAY_NAMES = {
+    mon: 'Senin',
+    tue: 'Selasa',
+    wed: 'Rabu',
+    thu: 'Kamis',
+    fri: 'Jumat',
+};
+
+// Cache loaded slots per coach+day+date to avoid redundant fetches
 const slotCache = {};
+const coachDayState = {};
+
+function toYmd(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+}
+
+function buildWeekDates() {
+    const now = new Date();
+    const jsDay = now.getDay();
+    const mondayOffset = jsDay === 0 ? -6 : 1 - jsDay;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() + mondayOffset);
+
+    const map = {};
+    WEEK_DAYS.forEach((dayKey, index) => {
+        const date = new Date(monday);
+        date.setDate(monday.getDate() + index);
+        map[dayKey] = {
+            date: toYmd(date),
+            label: `${DAY_NAMES[dayKey]}, ${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}`,
+        };
+    });
+
+    return map;
+}
+
+const weekDateMap = buildWeekDates();
 
 // ── Filter ──
 function filterCoaches(filter, el) {
@@ -336,18 +396,23 @@ function filterCoaches(filter, el) {
 // ── Slot Dropdown ──
 function toggleSlotDropdown(btn) {
     const coachId  = btn.dataset.coachId;
-    const day      = btn.dataset.day;
-    const dropId   = `slotDrop_${coachId}_${day}`;
-    const gridId   = `slotGrid_${coachId}_${day}`;
+    const activeDays = (btn.dataset.activeDays || '').split(',').filter(Boolean);
+    const dropId   = `slotDrop_${coachId}`;
+    const gridId   = `slotGrid_${coachId}`;
     const drop     = document.getElementById(dropId);
     const grid     = document.getElementById(gridId);
     const isOpen   = drop.classList.contains('open');
+
+    if (!activeDays.length) {
+        return;
+    }
 
     // Close all other dropdowns first
     document.querySelectorAll('.slot-dropdown.open').forEach(d => {
         if (d.id !== dropId) {
             d.classList.remove('open');
-            const otherBtn = document.querySelector(`[data-coach-id="${d.id.split('_')[1]}"][data-day="${d.id.split('_')[2]}"].check-btn`);
+            const otherCoachId = d.id.split('_')[1];
+            const otherBtn = document.querySelector(`#checkBtn_${otherCoachId}`);
             if (otherBtn) { otherBtn.classList.remove('open'); }
         }
     });
@@ -364,15 +429,62 @@ function toggleSlotDropdown(btn) {
     drop.classList.add('open');
     btn.classList.add('open');
 
-    const cacheKey = `${coachId}_${day}`;
+    if (!coachDayState[coachId]) {
+        const todayDay = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][new Date().getDay()];
+        const initialIndex = Math.max(0, activeDays.indexOf(todayDay));
+        coachDayState[coachId] = {
+            activeDays,
+            index: initialIndex,
+        };
+    }
+
+    loadCoachDaySlots(coachId, btn.dataset.slotsUrl, grid);
+}
+
+function changeSlotDay(coachId, direction) {
+    const state = coachDayState[coachId];
+    if (!state || !state.activeDays.length) {
+        return;
+    }
+
+    const total = state.activeDays.length;
+    state.index = (state.index + direction + total) % total;
+
+    const button = document.getElementById(`checkBtn_${coachId}`);
+    const grid = document.getElementById(`slotGrid_${coachId}`);
+    if (!button || !grid) {
+        return;
+    }
+
+    loadCoachDaySlots(coachId, button.dataset.slotsUrl, grid);
+}
+
+function loadCoachDaySlots(coachId, slotsUrl, grid) {
+    const state = coachDayState[coachId];
+    if (!state || !state.activeDays.length) {
+        return;
+    }
+
+    const day = state.activeDays[state.index];
+    const dayData = weekDateMap[day];
+    const label = document.getElementById(`slotDayLabel_${coachId}`);
+    if (label) {
+        label.textContent = dayData ? dayData.label : DAY_NAMES[day] || day;
+    }
+
+    const date = dayData?.date;
+    if (!date) {
+        grid.innerHTML = '<div class="slot-empty">Tanggal tidak valid.</div>';
+        return;
+    }
+
+    const cacheKey = `${coachId}_${day}_${date}`;
     if (slotCache[cacheKey]) {
         renderSlots(grid, slotCache[cacheKey]);
         return;
     }
 
-    // Fetch today's date for availability check
-    const today = new Date().toISOString().split('T')[0];
-    const url   = `${btn.dataset.slotsUrl}?day=${day}&date=${today}`;
+    const url = `${slotsUrl}?day=${day}&date=${date}`;
 
     grid.innerHTML = '<div class="slot-loading">Memuat slot...</div>';
 
@@ -408,7 +520,7 @@ function renderSlots(grid, slots) {
 
 // Close dropdowns when clicking outside
 document.addEventListener('click', (e) => {
-    if (!e.target.closest('.sched-day-group')) {
+    if (!e.target.closest('.coach-actions')) {
         document.querySelectorAll('.slot-dropdown.open').forEach(d => d.classList.remove('open'));
         document.querySelectorAll('.check-btn.open').forEach(b => b.classList.remove('open'));
     }

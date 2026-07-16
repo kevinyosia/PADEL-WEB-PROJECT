@@ -17,6 +17,14 @@ use Illuminate\Validation\ValidationException;
 
 class BookingController extends Controller
 {
+    private const DAY_MAP = [
+        1 => 'mon',
+        2 => 'tue',
+        3 => 'wed',
+        4 => 'thu',
+        5 => 'fri',
+    ];
+
     public function index(Request $request)
     {
         // Time slots untuk picker (6:00 - 23:00)
@@ -42,9 +50,7 @@ class BookingController extends Controller
         // Get all data
         $courts = Court::where('status', 'tersedia')->get();
 
-        // Map PHP dayOfWeek (0=Sun … 6=Sat) to schedule key
-        $dayMap = [0 => 'sun', 1 => 'mon', 2 => 'tue', 3 => 'wed', 4 => 'thu', 5 => 'fri', 6 => 'sat'];
-        $bookingDay = $tanggal ? $dayMap[Carbon::parse($tanggal)->dayOfWeek] ?? null : null;
+        $bookingDay = $tanggal ? $this->resolveScheduleDay($tanggal) : null;
 
         // Only show active coaches who have sessions on the booking day
         $coaches = Coach::where('availability_status', 'active')
@@ -105,8 +111,8 @@ class BookingController extends Controller
             'tanggal_booking' => ['required', 'date'],
             'jam_mulai' => ['required', 'date_format:H:i'],
             'jam_selesai' => ['required', 'date_format:H:i', 'after:jam_mulai'],
-            'coach_slot_start' => ['nullable', 'date_format:H:i'],
-            'coach_slot_end' => ['nullable', 'date_format:H:i'],
+            'coach_slot_start' => ['nullable', 'required_with:coach_id', 'date_format:H:i'],
+            'coach_slot_end' => ['nullable', 'required_with:coach_id', 'date_format:H:i', 'after:coach_slot_start'],
             'point_to_use' => ['nullable', 'integer', 'min:0'],
             'equipment_items' => ['nullable', 'array'],
             'equipment_items.*.equipment_id' => ['required_with:equipment_items', 'exists:equipment,id'],
@@ -123,10 +129,20 @@ class BookingController extends Controller
         $court = Court::findOrFail($validated['court_id']);
         $coach = ! empty($validated['coach_id']) ? Coach::findOrFail($validated['coach_id']) : null;
 
-        // Validate that the selected coach slot belongs to the coach's sessions for that day
+        if ($coach && $coach->availability_status !== 'active') {
+            throw ValidationException::withMessages([
+                'coach_id' => 'Coach sedang tidak tersedia.',
+            ]);
+        }
+
         if ($coach) {
-            $dayMap = [0 => 'sun', 1 => 'mon', 2 => 'tue', 3 => 'wed', 4 => 'thu', 5 => 'fri', 6 => 'sat'];
-            $bookingDay = $dayMap[Carbon::parse($validated['tanggal_booking'])->dayOfWeek];
+            $bookingDay = $this->resolveScheduleDay($validated['tanggal_booking']);
+
+            if (! $bookingDay) {
+                throw ValidationException::withMessages([
+                    'coach_id' => 'Coach hanya dapat dibooking pada hari Senin sampai Jumat.',
+                ]);
+            }
 
             $slotStart = $validated['coach_slot_start'] ?? null;
             $slotEnd = $validated['coach_slot_end'] ?? null;
@@ -137,30 +153,25 @@ class BookingController extends Controller
                 ]);
             }
 
-            if (! $coach->isAvailableOnDay($bookingDay) || ! $coach->isTimeInSession($bookingDay, $slotStart)) {
+            if (
+                ! empty($validated['coach_slot_start'])
+                && ! empty($validated['coach_slot_end'])
+                && ($validated['coach_slot_start'] !== $validated['jam_mulai'] || $validated['coach_slot_end'] !== $validated['jam_selesai'])
+            ) {
                 throw ValidationException::withMessages([
-                    'coach_slot_start' => 'Slot jam yang dipilih tidak tersedia untuk coach ini.',
+                    'coach_slot_start' => 'Jam coach harus sama dengan jam booking lapangan.',
                 ]);
             }
 
-            // Check slot not already taken by another user
-            $slotTaken = Reservation::query()
-                ->where('coach_id', $coach->id)
-                ->whereDate('tanggal_booking', $validated['tanggal_booking'])
-                ->whereIn('status_reservasi', ['confirmed', 'completed'])
-                ->where('jam_mulai', '<', $slotEnd)
-                ->where('jam_selesai', '>', $slotStart)
-                ->exists();
-
-            if ($slotTaken) {
+            if (! $coach->isAvailableOnDay($bookingDay) || ! $coach->isRangeWithinAnySession($bookingDay, $slotStart, $slotEnd)) {
                 throw ValidationException::withMessages([
-                    'coach_slot_start' => 'Slot jam coach sudah dipesan. Pilih slot lain.',
+                    'coach_slot_start' => 'Jam yang dipilih berada di luar sesi coach.',
                 ]);
             }
         }
 
         $totalHargaLapangan = $court->priceForRange($mulai, $selesai);
-        $totalHargaCoach = $coach ? (int) $coach->harga_per_jam : 0;
+        $totalHargaCoach = $coach ? ((int) $coach->harga_per_jam * $durasiJam) : 0;
 
         $equipmentItems = $validated['equipment_items'] ?? [];
         $productItems = $validated['product_items'] ?? [];
@@ -220,13 +231,30 @@ class BookingController extends Controller
                 ]);
             }
 
+            if (! empty($validated['coach_id'])) {
+                $coachTaken = Reservation::query()
+                    ->where('coach_id', $validated['coach_id'])
+                    ->whereDate('tanggal_booking', $validated['tanggal_booking'])
+                    ->whereIn('status_reservasi', ['confirmed', 'completed'])
+                    ->where('jam_mulai', '<', $validated['jam_selesai'])
+                    ->where('jam_selesai', '>', $validated['jam_mulai'])
+                    ->lockForUpdate()
+                    ->exists();
+
+                if ($coachTaken) {
+                    throw ValidationException::withMessages([
+                        'coach_slot_start' => 'Coach sudah dibooking di jam tersebut.',
+                    ]);
+                }
+            }
+
             $reservation = Reservation::create([
                 'user_id' => Auth::id(),
                 'court_id' => $validated['court_id'],
                 'coach_id' => $validated['coach_id'] ?? null,
                 'tanggal_booking' => $validated['tanggal_booking'],
-                'jam_mulai' => $validated['coach_id'] ? ($validated['coach_slot_start'] ?? $validated['jam_mulai']) : $validated['jam_mulai'],
-                'jam_selesai' => $validated['coach_id'] ? ($validated['coach_slot_end'] ?? $validated['jam_selesai']) : $validated['jam_selesai'],
+                'jam_mulai' => Carbon::createFromFormat('H:i', $validated['jam_mulai'])->format('H:i:s'),
+                'jam_selesai' => Carbon::createFromFormat('H:i', $validated['jam_selesai'])->format('H:i:s'),
                 'status_reservasi' => 'confirmed',
                 'batas_pembayaran' => null,
             ]);
@@ -289,5 +317,12 @@ class BookingController extends Controller
 
         // Redirect ke payment page
         return redirect()->route('payment.page', $transaction->id);
+    }
+
+    private function resolveScheduleDay(string $date): ?string
+    {
+        $dayOfWeekIso = Carbon::parse($date)->dayOfWeekIso;
+
+        return self::DAY_MAP[$dayOfWeekIso] ?? null;
     }
 }
