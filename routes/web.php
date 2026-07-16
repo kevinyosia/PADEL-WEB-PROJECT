@@ -107,7 +107,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/payment/{transaction}/complete', [PaymentController::class, 'complete'])->name('payment.complete');
 
     Route::get('/coaches', [CoachesPageController::class, 'index'])->name('coaches.index');
-    
+    Route::get('/coaches/{coach}/slots', [CoachesPageController::class, 'slots'])->name('coaches.slots');
+
     // Coach review routes (user can submit & view)
     Route::get('/coach/{coach}/reviews', [CoachReviewController::class, 'getCoachReviews'])->name('coach.reviews.get');
     Route::post('/coach/{coach}/reviews', [CoachReviewController::class, 'store'])->name('coach.reviews.store');
@@ -133,7 +134,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('manager')->prefix('manajemen')->as('manager.')->group(function () {
         Route::get('/dashboard', [ManagerDashboardController::class, 'index'])->name('dashboard');
         Route::get('/reviews', [ManagerReviewsController::class, 'index'])->name('reviews');
-        
+
         // Coach reviews management
         Route::get('/coach/{coach}/reviews', [CoachReviewController::class, 'getCoachReviews'])->name('coach.reviews');
     });

@@ -59,7 +59,7 @@
     .coach-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 8px;
         display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
-    .coach-meta { display: flex; align-items: center; gap: 14px; }
+    .coach-meta { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
     .coach-rating { display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; color: var(--text-dark); }
     .star { color: var(--gold); font-size: 14px; }
     .rating-count {
@@ -71,8 +71,12 @@
     .coach-rate { font-size: 15px; font-weight: 800; color: var(--text-dark); }
     .per-sesi { font-size: 11px; color: var(--text-muted); font-weight: 600; }
 
-    /* Schedule days */
-    .sched-days { display: flex; gap: 4px; }
+    /* Schedule days row */
+    .sched-days-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+    /* Each active day = pill + Check button grouped */
+    .sched-day-group { position: relative; display: inline-flex; align-items: center; gap: 3px; }
+
     .sched-day {
         width: 24px; height: 24px; border-radius: 6px;
         font-size: 9px; font-weight: 800; text-transform: uppercase;
@@ -80,6 +84,57 @@
     }
     .sched-on  { background: #D6EDCC; color: var(--green-deep); }
     .sched-off { background: #E8E3D3; color: #B0AA98; }
+
+    /* Check button — only shown for active days */
+    .check-btn {
+        height: 18px; padding: 0 6px;
+        background: var(--green-deep); color: #fff;
+        border: none; border-radius: 4px;
+        font-size: 9px; font-weight: 800; letter-spacing: .03em;
+        cursor: pointer; transition: background .15s;
+        display: inline-flex; align-items: center; gap: 2px;
+        white-space: nowrap;
+    }
+    .check-btn:hover { background: var(--green-mid); }
+    .check-btn .chev { transition: transform .2s; display: inline-block; }
+    .check-btn.open .chev { transform: rotate(180deg); }
+
+    /* Slot dropdown */
+    .slot-dropdown {
+        display: none;
+        position: absolute; top: calc(100% + 6px); left: 0; z-index: 200;
+        background: #fff; border: 1px solid rgba(0,0,0,0.10);
+        border-radius: 12px; padding: 12px;
+        box-shadow: 0 8px 28px rgba(0,0,0,0.14);
+        min-width: 200px;
+    }
+    .slot-dropdown.open { display: block; }
+    .slot-dropdown-title {
+        font-size: 10px; font-weight: 800; text-transform: uppercase;
+        letter-spacing: .06em; color: var(--text-muted); margin-bottom: 8px;
+    }
+    .slot-grid { display: flex; flex-direction: column; gap: 5px; }
+    .slot-box {
+        padding: 7px 12px; border-radius: 8px; font-size: 12px; font-weight: 700;
+        border: 1.5px solid transparent;
+        display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    }
+    .slot-box.available {
+        background: #E8F5E2; border-color: #A8D899; color: var(--green-deep);
+    }
+    .slot-box.booked {
+        background: #F2F0EC; border-color: #D4CFC3; color: #A09A8C;
+        text-decoration: line-through;
+    }
+    .slot-badge {
+        font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 10px;
+        text-transform: uppercase; letter-spacing: .04em;
+    }
+    .slot-badge.av  { background: #C5E8B5; color: var(--green-deep); }
+    .slot-badge.bk  { background: #E0DDD6; color: #9A9588; }
+
+    .slot-loading { font-size: 12px; color: var(--text-muted); padding: 8px 0; text-align: center; }
+    .slot-empty   { font-size: 12px; color: var(--text-muted); padding: 8px 0; text-align: center; }
 
     /* Book button */
     .book-btn {
@@ -92,23 +147,11 @@
     .book-btn:hover { background: var(--green-mid); }
     .book-btn.inactive { background: #C5C0B0; cursor: not-allowed; }
 
-    /* Schedule expand */
-    .sched-panel {
-        display: none; border-top: 1px solid rgba(0,0,0,0.06);
-        padding-top: 14px; margin-top: 14px;
-    }
-    .sched-panel.open { display: block; }
-    .sched-grid {
-        display: grid; grid-template-columns: repeat(5, 1fr);
-        gap: 6px;
-    }
-    .sched-col { text-align: center; }
-    .sched-col-day { font-size: 10px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; }
-
     .empty-state { text-align: center; padding: 64px 20px; }
     .empty-state .e-icon { font-size: 40px; margin-bottom: 10px; }
     .empty-state p { color: var(--text-muted); font-size: 14px; }
 
+    /* Reviews modal */
     .reviews-modal-overlay {
         display: none; position: fixed; inset: 0; z-index: 9000;
         background: rgba(15, 23, 42, 0.42); padding: 24px;
@@ -148,6 +191,7 @@
         .coach-card { align-items: flex-start; }
         .coach-meta { align-items: flex-start; flex-direction: column; gap: 8px; }
         .reviews-modal-overlay { padding: 16px; }
+        .slot-dropdown { position: fixed; left: 16px; right: 16px; width: auto; min-width: unset; }
     }
 </style>
 @endpush
@@ -170,9 +214,9 @@
     <div class="coaches-list" id="coachList">
         @forelse($coaches as $coach)
         @php
-            $avgRating = $coach->reviews->avg('rating') ?? 0;
+            $avgRating  = $coach->reviews->avg('rating') ?? 0;
             $reviewCount = $coach->reviews->count();
-            $days = ['mon'=>'S','tue'=>'S','wed'=>'R','thu'=>'K','fri'=>'J'];
+            $days = ['mon' => 'S', 'tue' => 'S', 'wed' => 'R', 'thu' => 'K', 'fri' => 'J'];
         @endphp
         <div class="coach-card" data-status="{{ $coach->availability_status ?? 'inactive' }}" id="coachCard{{ $coach->id }}">
             <div class="coach-avatar">
@@ -209,10 +253,35 @@
                         Rp{{ number_format($coach->harga_per_jam,0,',','.') }}
                         <span class="per-sesi">/peserta/sesi</span>
                     </span>
+
+                    {{-- Schedule days with Check button per active day --}}
                     @if(!empty($coach->schedule))
-                    <div class="sched-days">
+                    <div class="sched-days-row">
                         @foreach($days as $key => $label)
-                            <div class="sched-day {{ $coach->isAvailableOnDay($key) ? 'sched-on' : 'sched-off' }}">{{ $label }}</div>
+                            @php $isOn = $coach->isAvailableOnDay($key); @endphp
+                            @if($isOn)
+                            <div class="sched-day-group" id="dayGroup_{{ $coach->id }}_{{ $key }}">
+                                <div class="sched-day sched-on">{{ $label }}</div>
+                                <button
+                                    type="button"
+                                    class="check-btn"
+                                    id="checkBtn_{{ $coach->id }}_{{ $key }}"
+                                    data-coach-id="{{ $coach->id }}"
+                                    data-day="{{ $key }}"
+                                    data-slots-url="{{ route('coaches.slots', $coach) }}"
+                                    onclick="toggleSlotDropdown(this)"
+                                >Check <span class="chev">▼</span></button>
+
+                                <div class="slot-dropdown" id="slotDrop_{{ $coach->id }}_{{ $key }}">
+                                    <div class="slot-dropdown-title">Jam tersedia — Hari {{ strtoupper($key) }}</div>
+                                    <div class="slot-grid" id="slotGrid_{{ $coach->id }}_{{ $key }}">
+                                        <div class="slot-loading">Memuat...</div>
+                                    </div>
+                                </div>
+                            </div>
+                            @else
+                            <div class="sched-day sched-off">{{ $label }}</div>
+                            @endif
                         @endforeach
                     </div>
                     @endif
@@ -246,11 +315,15 @@
 
 @push('scripts')
 <script>
-const coachReviewsModal = document.getElementById('coachReviewsModal');
-const coachReviewsTitle = document.getElementById('coachReviewsTitle');
+const coachReviewsModal   = document.getElementById('coachReviewsModal');
+const coachReviewsTitle   = document.getElementById('coachReviewsTitle');
 const coachReviewsSummary = document.getElementById('coachReviewsSummary');
-const coachReviewsBody = document.getElementById('coachReviewsBody');
+const coachReviewsBody    = document.getElementById('coachReviewsBody');
 
+// Cache loaded slots per coach+day to avoid redundant fetches
+const slotCache = {};
+
+// ── Filter ──
 function filterCoaches(filter, el) {
     document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
     el.classList.add('active');
@@ -260,11 +333,93 @@ function filterCoaches(filter, el) {
     });
 }
 
+// ── Slot Dropdown ──
+function toggleSlotDropdown(btn) {
+    const coachId  = btn.dataset.coachId;
+    const day      = btn.dataset.day;
+    const dropId   = `slotDrop_${coachId}_${day}`;
+    const gridId   = `slotGrid_${coachId}_${day}`;
+    const drop     = document.getElementById(dropId);
+    const grid     = document.getElementById(gridId);
+    const isOpen   = drop.classList.contains('open');
+
+    // Close all other dropdowns first
+    document.querySelectorAll('.slot-dropdown.open').forEach(d => {
+        if (d.id !== dropId) {
+            d.classList.remove('open');
+            const otherBtn = document.querySelector(`[data-coach-id="${d.id.split('_')[1]}"][data-day="${d.id.split('_')[2]}"].check-btn`);
+            if (otherBtn) { otherBtn.classList.remove('open'); }
+        }
+    });
+    document.querySelectorAll('.check-btn.open').forEach(b => {
+        if (b !== btn) { b.classList.remove('open'); }
+    });
+
+    if (isOpen) {
+        drop.classList.remove('open');
+        btn.classList.remove('open');
+        return;
+    }
+
+    drop.classList.add('open');
+    btn.classList.add('open');
+
+    const cacheKey = `${coachId}_${day}`;
+    if (slotCache[cacheKey]) {
+        renderSlots(grid, slotCache[cacheKey]);
+        return;
+    }
+
+    // Fetch today's date for availability check
+    const today = new Date().toISOString().split('T')[0];
+    const url   = `${btn.dataset.slotsUrl}?day=${day}&date=${today}`;
+
+    grid.innerHTML = '<div class="slot-loading">Memuat slot...</div>';
+
+    fetch(url, { headers: { 'Accept': 'application/json' } })
+        .then(r => r.json())
+        .then(data => {
+            slotCache[cacheKey] = data.slots ?? [];
+            renderSlots(grid, slotCache[cacheKey]);
+        })
+        .catch(() => {
+            grid.innerHTML = '<div class="slot-empty">Gagal memuat slot.</div>';
+        });
+}
+
+function renderSlots(grid, slots) {
+    if (!slots || slots.length === 0) {
+        grid.innerHTML = '<div class="slot-empty">Tidak ada slot tersedia.</div>';
+        return;
+    }
+
+    grid.innerHTML = slots.map(slot => {
+        const cls    = slot.available ? 'available' : 'booked';
+        const badge  = slot.available
+            ? '<span class="slot-badge av">Tersedia</span>'
+            : '<span class="slot-badge bk">Penuh</span>';
+        return `
+            <div class="slot-box ${cls}">
+                <span>${slot.start} – ${slot.end}</span>
+                ${badge}
+            </div>`;
+    }).join('');
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.sched-day-group')) {
+        document.querySelectorAll('.slot-dropdown.open').forEach(d => d.classList.remove('open'));
+        document.querySelectorAll('.check-btn.open').forEach(b => b.classList.remove('open'));
+    }
+});
+
+// ── Reviews Modal ──
 async function openCoachReviews(button) {
     const coachName = button.dataset.coachName || 'Coach';
-    coachReviewsTitle.textContent = `Review ${coachName}`;
+    coachReviewsTitle.textContent   = `Review ${coachName}`;
     coachReviewsSummary.textContent = 'Memuat review...';
-    coachReviewsBody.innerHTML = '<div class="reviews-modal-loading">Memuat review...</div>';
+    coachReviewsBody.innerHTML      = '<div class="reviews-modal-loading">Memuat review...</div>';
     coachReviewsModal.classList.add('show');
 
     try {
@@ -273,11 +428,9 @@ async function openCoachReviews(button) {
         });
         const data = await response.json();
 
-        if (!response.ok) {
-            throw new Error(data.error || 'Review coach gagal dimuat.');
-        }
+        if (!response.ok) { throw new Error(data.error || 'Review coach gagal dimuat.'); }
 
-        const total = data.stats?.total ?? data.reviews.length;
+        const total   = data.stats?.total ?? data.reviews.length;
         const average = data.stats?.average ?? 0;
         coachReviewsSummary.textContent = total > 0
             ? `${average}/5 dari ${total} review`
@@ -289,12 +442,12 @@ async function openCoachReviews(button) {
         }
 
         coachReviewsBody.innerHTML = data.reviews.map((review) => {
-            const rating = Number(review.rating || 0);
-            const filled = '★'.repeat(rating);
-            const empty = '☆'.repeat(5 - rating);
+            const rating  = Number(review.rating || 0);
+            const filled  = '★'.repeat(rating);
+            const empty   = '☆'.repeat(5 - rating);
             const userName = escapeHtml(review.user?.name || 'Member');
-            const comment = escapeHtml(review.review || 'Tidak ada komentar.');
-            const date = review.created_at ? new Date(review.created_at).toLocaleDateString('id-ID', {
+            const comment  = escapeHtml(review.review || 'Tidak ada komentar.');
+            const date     = review.created_at ? new Date(review.created_at).toLocaleDateString('id-ID', {
                 day: '2-digit', month: 'short', year: 'numeric'
             }) : '';
 
@@ -316,7 +469,7 @@ async function openCoachReviews(button) {
 }
 
 function closeCoachReviews(event) {
-    if (event && event.target !== coachReviewsModal) return;
+    if (event && event.target !== coachReviewsModal) { return; }
     coachReviewsModal.classList.remove('show');
 }
 
@@ -330,7 +483,7 @@ function escapeHtml(value) {
 }
 
 document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') closeCoachReviews();
+    if (event.key === 'Escape') { closeCoachReviews(); }
 });
 </script>
 @endpush

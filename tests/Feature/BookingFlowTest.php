@@ -2,7 +2,6 @@
 
 use App\Models\Coach;
 use App\Models\Court;
-use App\Models\Equipment;
 use App\Models\Reservation;
 use App\Models\Transaction;
 use App\Models\User;
@@ -128,4 +127,141 @@ test('courts availability returns only available booked maintenance statuses', f
     expect($slot10['price'])->toBe(275000);
 
     expect(collect($courtB['slots'])->pluck('status')->unique()->values()->all())->toBe(['maintenance']);
+});
+
+test('booking store with valid coach session slot succeeds', function () {
+    Carbon::setTestNow('2026-04-16 10:00:00');
+
+    $user = User::factory()->create();
+    $coachUser = User::factory()->create(['role' => 'coach']);
+    $coach = Coach::create([
+        'user_id' => $coachUser->id,
+        'deskripsi_keahlian' => 'Expert coach',
+        'harga_per_jam' => 150000,
+        'availability_status' => 'active',
+        'schedule' => [
+            'fri' => ['active' => true, 'sessions' => [['start' => '13:00', 'end' => '16:00']]],
+            'mon' => ['active' => false, 'sessions' => []],
+            'tue' => ['active' => false, 'sessions' => []],
+            'wed' => ['active' => false, 'sessions' => []],
+            'thu' => ['active' => false, 'sessions' => []],
+        ],
+    ]);
+
+    $court = Court::create([
+        'nama_lapangan' => 'Court A',
+        'deskripsi' => 'Test court',
+        'harga_pagi_tengahmalam' => 100000,
+        'harga_malam' => 120000,
+        'harga_weekend' => 140000,
+        'status' => 'tersedia',
+    ]);
+
+    // 2026-04-17 is Friday
+    $response = $this->actingAs($user)->post(route('booking.store'), [
+        'court_id' => $court->id,
+        'tanggal_booking' => '2026-04-17',
+        'jam_mulai' => '13:00',
+        'jam_selesai' => '14:00',
+        'coach_id' => $coach->id,
+        'coach_slot_start' => '13:00',
+        'coach_slot_end' => '14:00',
+        'payment_channel' => 'virtual_account',
+    ]);
+
+    $response->assertRedirect();
+    $reservation = Reservation::first();
+    expect($reservation)->not->toBeNull();
+    expect($reservation->coach_id)->toBe($coach->id);
+    expect($reservation->jam_mulai)->toBe('13:00:00');
+    expect($reservation->jam_selesai)->toBe('14:00:00');
+
+    Carbon::setTestNow();
+});
+
+test('booking store with coach but missing slot fails', function () {
+    Carbon::setTestNow('2026-04-16 10:00:00');
+
+    $user = User::factory()->create();
+    $coachUser = User::factory()->create(['role' => 'coach']);
+    $coach = Coach::create([
+        'user_id' => $coachUser->id,
+        'deskripsi_keahlian' => 'Expert coach',
+        'harga_per_jam' => 150000,
+        'availability_status' => 'active',
+        'schedule' => [
+            'fri' => ['active' => true, 'sessions' => [['start' => '13:00', 'end' => '16:00']]],
+            'mon' => ['active' => false, 'sessions' => []],
+            'tue' => ['active' => false, 'sessions' => []],
+            'wed' => ['active' => false, 'sessions' => []],
+            'thu' => ['active' => false, 'sessions' => []],
+        ],
+    ]);
+
+    $court = Court::create([
+        'nama_lapangan' => 'Court A',
+        'deskripsi' => 'Test court',
+        'harga_pagi_tengahmalam' => 100000,
+        'harga_malam' => 120000,
+        'harga_weekend' => 140000,
+        'status' => 'tersedia',
+    ]);
+
+    $response = $this->actingAs($user)->post(route('booking.store'), [
+        'court_id' => $court->id,
+        'tanggal_booking' => '2026-04-17',
+        'jam_mulai' => '13:00',
+        'jam_selesai' => '14:00',
+        'coach_id' => $coach->id,
+        'payment_channel' => 'virtual_account',
+    ]);
+
+    $response->assertStatus(302)->assertSessionHasErrors('coach_slot_start');
+
+    Carbon::setTestNow();
+});
+
+test('booking store with coach but invalid slot time fails', function () {
+    Carbon::setTestNow('2026-04-16 10:00:00');
+
+    $user = User::factory()->create();
+    $coachUser = User::factory()->create(['role' => 'coach']);
+    $coach = Coach::create([
+        'user_id' => $coachUser->id,
+        'deskripsi_keahlian' => 'Expert coach',
+        'harga_per_jam' => 150000,
+        'availability_status' => 'active',
+        'schedule' => [
+            'fri' => ['active' => true, 'sessions' => [['start' => '13:00', 'end' => '16:00']]],
+            'mon' => ['active' => false, 'sessions' => []],
+            'tue' => ['active' => false, 'sessions' => []],
+            'wed' => ['active' => false, 'sessions' => []],
+            'thu' => ['active' => false, 'sessions' => []],
+        ],
+    ]);
+
+    $court = Court::create([
+        'nama_lapangan' => 'Court A',
+        'deskripsi' => 'Test court',
+        'harga_pagi_tengahmalam' => 100000,
+        'harga_malam' => 120000,
+        'harga_weekend' => 140000,
+        'status' => 'tersedia',
+    ]);
+
+    // Slot 12:00 is outside coach's 13:00-16:00 session
+    $response = $this->actingAs($user)->post(route('booking.store'), [
+        'court_id' => $court->id,
+        'tanggal_booking' => '2026-04-17',
+        'jam_mulai' => '12:00',
+        'jam_selesai' => '13:00',
+        'coach_id' => $coach->id,
+        'coach_slot_start' => '12:00',
+        'coach_slot_end' => '13:00',
+        'payment_channel' => 'virtual_account',
+    ]);
+
+    $response->assertStatus(302)->assertSessionHasErrors('coach_slot_start');
+
+    Carbon::setTestNow();
 });

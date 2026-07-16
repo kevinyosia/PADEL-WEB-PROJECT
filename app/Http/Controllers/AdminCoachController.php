@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreCoachRequest;
 use App\Http\Requests\UpdateCoachRequest;
-use App\Traits\HandleFileUpload;
 use App\Models\Coach;
 use App\Models\User;
+use App\Traits\HandleFileUpload;
 use Illuminate\Support\Facades\Hash;
 
 class AdminCoachController extends Controller
@@ -19,7 +19,7 @@ class AdminCoachController extends Controller
     public function index()
     {
         $coaches = Coach::with('user')->get();
-        
+
         $stats = [
             'total' => $coaches->count(),
             'active' => $coaches->where('availability_status', 'active')->count(),
@@ -63,19 +63,12 @@ class AdminCoachController extends Controller
             $photoPath = $this->uploadFile($request->file('photo'), 'photos/coaches');
         }
 
-        
         Coach::create([
             'user_id' => $user->id,
             'deskripsi_keahlian' => $validated['deskripsi_keahlian'],
             'harga_per_jam' => $validated['harga_per_jam'],
             'availability_status' => $validated['availability_status'],
-            'schedule' => [
-                'mon' => $validated['schedule']['mon'] ?? false,
-                'tue' => $validated['schedule']['tue'] ?? false,
-                'wed' => $validated['schedule']['wed'] ?? false,
-                'thu' => $validated['schedule']['thu'] ?? false,
-                'fri' => $validated['schedule']['fri'] ?? false,
-            ],
+            'schedule' => $this->buildSchedule($validated['schedule']),
             'photo' => $photoPath,
         ]);
 
@@ -107,17 +100,45 @@ class AdminCoachController extends Controller
             'deskripsi_keahlian' => $validated['deskripsi_keahlian'],
             'harga_per_jam' => $validated['harga_per_jam'],
             'availability_status' => $validated['availability_status'],
-            'schedule' => [
-                'mon' => $validated['schedule']['mon'] ?? false,
-                'tue' => $validated['schedule']['tue'] ?? false,
-                'wed' => $validated['schedule']['wed'] ?? false,
-                'thu' => $validated['schedule']['thu'] ?? false,
-                'fri' => $validated['schedule']['fri'] ?? false,
-            ],
+            'schedule' => $this->buildSchedule($validated['schedule']),
             'photo' => $photoPath,
         ]);
 
         return redirect()->route('admin.coaches.index')->with('success', 'Data coach berhasil diperbarui');
+    }
+
+    /**
+     * Build a normalised schedule array from validated request data.
+     *
+     * @param  array<string, array{active: bool, sessions: list<array{start: string, end: string}>}>  $rawSchedule
+     * @return array<string, array{active: bool, sessions: list<array{start: string, end: string}>}>
+     */
+    private function buildSchedule(array $rawSchedule): array
+    {
+        $days = ['mon', 'tue', 'wed', 'thu', 'fri'];
+        $schedule = [];
+
+        foreach ($days as $day) {
+            $dayData = $rawSchedule[$day] ?? [];
+            $active = (bool) ($dayData['active'] ?? false);
+            $sessions = [];
+
+            if ($active) {
+                foreach ($dayData['sessions'] ?? [] as $session) {
+                    $sessions[] = [
+                        'start' => $session['start'],
+                        'end' => $session['end'],
+                    ];
+                }
+            }
+
+            $schedule[$day] = [
+                'active' => $active,
+                'sessions' => $sessions,
+            ];
+        }
+
+        return $schedule;
     }
 
     /**
@@ -147,4 +168,3 @@ class AdminCoachController extends Controller
         return redirect()->route('admin.coaches.index')->with('success', 'Coach dan akunnya berhasil dihapus');
     }
 }
-

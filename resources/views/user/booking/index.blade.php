@@ -217,6 +217,44 @@
         color: var(--text-muted);
         line-height: 1.4;
     }
+
+    /* Booking slots */
+    .booking-slot-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .booking-slot-item {
+        padding: 8px 14px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        border: 1.5px solid transparent;
+        transition: all 0.15s;
+    }
+    .booking-slot-item.available {
+        background: #fff;
+        border-color: rgba(0,0,0,0.08);
+        color: var(--text-dark);
+    }
+    .booking-slot-item.available:hover {
+        background: #E8F5E2;
+        border-color: #A8D899;
+        color: var(--green-deep);
+    }
+    .booking-slot-item.available.selected {
+        background: var(--green-deep);
+        border-color: var(--green-deep);
+        color: #fff;
+    }
+    .booking-slot-item.booked {
+        background: #ECE9DF;
+        border-color: transparent;
+        color: #B2AD9E;
+        text-decoration: line-through;
+        cursor: not-allowed;
+    }
 </style>
 @endpush
 
@@ -256,18 +294,28 @@
                 <div style="font-size:12px;color:var(--text-muted);padding:2px 0;">Pilih coach (opsional)</div>
             </div>
             @forelse($coaches as $coach)
-            <div class="coach-option" id="coachOpt{{ $coach->id }}" onclick="selectCoach({{ $coach->id }}, {{ $coach->harga_per_jam }})">
-                <div class="coach-avatar" style="@if($coach->photo)background-image: url('{{ asset('storage/' . $coach->photo) }}'); background-size: cover; background-position: center;@endif">
-                    @if(!$coach->photo)
-                    {{ strtoupper(substr($coach->user->name ?? 'C', 0, 1)) }}
-                    @endif
+            <div class="coach-option-container" id="coachContainer{{ $coach->id }}" style="border-bottom: 1px solid rgba(0,0,0,0.05);">
+                <div class="coach-option" id="coachOpt{{ $coach->id }}" onclick="selectCoach({{ $coach->id }}, {{ $coach->harga_per_jam }})" style="border-bottom: none;">
+                    <div class="coach-avatar" style="@if($coach->photo)background-image: url('{{ asset('storage/' . $coach->photo) }}'); background-size: cover; background-position: center;@endif">
+                        @if(!$coach->photo)
+                        {{ strtoupper(substr($coach->user->name ?? 'C', 0, 1)) }}
+                        @endif
+                    </div>
+                    <div>
+                        <div class="coach-name">{{ $coach->user->name ?? 'Coach' }}</div>
+                        <div class="coach-desc">{{ Str::limit($coach->deskripsi_keahlian, 50) }}</div>
+                    </div>
+                    <div class="coach-price">Rp{{ number_format($coach->harga_per_jam,0,',','.') }}/sesi</div>
+                    <div class="coach-check" id="coachCheck{{ $coach->id }}"></div>
                 </div>
-                <div>
-                    <div class="coach-name">{{ $coach->user->name ?? 'Coach' }}</div>
-                    <div class="coach-desc">{{ Str::limit($coach->deskripsi_keahlian, 50) }}</div>
+
+                {{-- Slots container for this coach --}}
+                <div class="coach-slots-container" id="coachSlots{{ $coach->id }}" style="display: none; padding: 10px 20px 18px 20px; background: #FAF9F5; border-top: 1px solid rgba(0,0,0,0.03);">
+                    <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px;">Pilih 1 Jam Sesi Coach:</div>
+                    <div class="booking-slot-grid" id="bookingSlotGrid{{ $coach->id }}">
+                        <div style="font-size: 12px; color: var(--text-muted);">Memuat slot...</div>
+                    </div>
                 </div>
-                <div class="coach-price">Rp{{ number_format($coach->harga_per_jam,0,',','.') }}/jam</div>
-                <div class="coach-check" id="coachCheck{{ $coach->id }}"></div>
             </div>
             @empty
             <div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px;">Tidak ada coach tersedia.</div>
@@ -415,6 +463,8 @@
     <input type="hidden" name="jam_mulai"       value="{{ request('jam_mulai') }}">
     <input type="hidden" name="jam_selesai"     value="{{ request('jam_selesai') }}">
     <input type="hidden" name="coach_id"        id="finalCoachId" value="">
+    <input type="hidden" name="coach_slot_start" id="finalCoachSlotStart" value="">
+    <input type="hidden" name="coach_slot_end"   id="finalCoachSlotEnd" value="">
     <input type="hidden" name="point_to_use" id="finalPointUse" value="0">
     <div id="equipInputs"></div>
 </form>
@@ -427,6 +477,10 @@ const DURASI_JAM   = {{ $durasiJam ?? 1 }};
 const IS_MEMBER = {{ $isMember ? 'true' : 'false' }};
 const AVAILABLE_POINTS = {{ (int) ($availablePoints ?? 0) }};
 let selectedCoach  = null;
+let selectedCoachSlotStart = null;
+let selectedCoachSlotEnd = null;
+const coachBookingDate = '{{ $tanggal }}';
+const coachBookingDay = '{{ $bookingDay }}';
 let coachPrice     = 0;
 let pointsUsed     = 0;
 let equipmentQtys  = {};   // { id: { qty, price } }
@@ -451,19 +505,99 @@ function toggleAcc(key) {
 // ── Coach ──
 function selectCoach(id, price) {
     if (selectedCoach === id) {
-        // deselect
+        // deselect coach
         document.getElementById(`coachOpt${id}`).classList.remove('selected');
         document.getElementById(`coachCheck${id}`).classList.remove('checked');
-        selectedCoach = null; coachPrice = 0;
+        document.getElementById(`coachSlots${id}`).style.display = 'none';
+        
+        // Clear slot selections
+        selectedCoach = null;
+        selectedCoachSlotStart = null;
+        selectedCoachSlotEnd = null;
+        coachPrice = 0;
     } else {
+        // Deselect previous coach if any
         if (selectedCoach) {
             document.getElementById(`coachOpt${selectedCoach}`)?.classList.remove('selected');
             document.getElementById(`coachCheck${selectedCoach}`)?.classList.remove('checked');
+            document.getElementById(`coachSlots${selectedCoach}`).style.display = 'none';
+            
+            // Clear previous coach's slot selection highlight
+            const prevGrid = document.getElementById(`bookingSlotGrid${selectedCoach}`);
+            if (prevGrid) {
+                prevGrid.querySelectorAll('.booking-slot-item.selected').forEach(el => el.classList.remove('selected'));
+            }
         }
+        
+        // Select new coach
         document.getElementById(`coachOpt${id}`).classList.add('selected');
         document.getElementById(`coachCheck${id}`).classList.add('checked');
+        document.getElementById(`coachSlots${id}`).style.display = 'block';
+        
         selectedCoach = id;
-        coachPrice = price * DURASI_JAM;
+        selectedCoachSlotStart = null;
+        selectedCoachSlotEnd = null;
+        coachPrice = 0; // Starts at 0 until slot is picked
+        
+        fetchCoachSlotsForBooking(id, price);
+    }
+    updateTotal();
+}
+
+function fetchCoachSlotsForBooking(coachId, price) {
+    const grid = document.getElementById(`bookingSlotGrid${coachId}`);
+    if (!grid) return;
+
+    grid.innerHTML = '<div style="font-size: 12px; color: var(--text-muted);">Memuat slot...</div>';
+
+    const url = `/coaches/${coachId}/slots?day=${coachBookingDay}&date=${coachBookingDate}`;
+
+    fetch(url, { headers: { 'Accept': 'application/json' } })
+        .then(r => r.json())
+        .then(data => {
+            const slots = data.slots ?? [];
+            if (slots.length === 0) {
+                grid.innerHTML = '<div style="font-size: 12px; color: var(--text-muted);">Tidak ada slot sesi pada hari ini.</div>';
+                return;
+            }
+
+            grid.innerHTML = slots.map((slot) => {
+                const cls = slot.available ? 'available' : 'booked';
+                const clickHandler = slot.available 
+                    ? `onclick="selectCoachSlot(${coachId}, '${slot.start}', '${slot.end}', ${price}, this)"` 
+                    : '';
+                return `
+                    <div class="booking-slot-item ${cls}" ${clickHandler}>
+                        ${slot.start} – ${slot.end}
+                    </div>
+                `;
+            }).join('');
+        })
+        .catch(() => {
+            grid.innerHTML = '<div style="font-size: 12px; color: var(--text-muted); color: #EF4444;">Gagal memuat slot.</div>';
+        });
+}
+
+function selectCoachSlot(coachId, start, end, price, element) {
+    // Check if this slot is already selected
+    if (element.classList.contains('selected')) {
+        // Deselect slot
+        element.classList.remove('selected');
+        selectedCoachSlotStart = null;
+        selectedCoachSlotEnd = null;
+        coachPrice = 0;
+    } else {
+        // Remove selected class from all other slots for this coach
+        const container = document.getElementById(`bookingSlotGrid${coachId}`);
+        if (container) {
+            container.querySelectorAll('.booking-slot-item.selected').forEach(el => {
+                el.classList.remove('selected');
+            });
+        }
+        element.classList.add('selected');
+        selectedCoachSlotStart = start;
+        selectedCoachSlotEnd = end;
+        coachPrice = price; // Coach price is per selected slot session
     }
     updateTotal();
 }
@@ -528,6 +662,11 @@ function updateTotal() {
 
 // ── Confirm modal ──
 function openConfirm() {
+    if (selectedCoach && (!selectedCoachSlotStart || !selectedCoachSlotEnd)) {
+        alert('Silakan pilih salah satu slot jam untuk coach yang dipilih.');
+        return;
+    }
+    
     const et = equipTotal();
     const pt = productTotal();
     document.getElementById('mCourtPrice').textContent = 'Rp' + fmtRp(COURT_PRICE);
@@ -563,6 +702,8 @@ function closeConfirm() { document.getElementById('confirmModal').classList.remo
 // ── Submit ──
 function submitBooking() {
     document.getElementById('finalCoachId').value = selectedCoach ?? '';
+    document.getElementById('finalCoachSlotStart').value = selectedCoachSlotStart ?? '';
+    document.getElementById('finalCoachSlotEnd').value = selectedCoachSlotEnd ?? '';
     document.getElementById('finalPointUse').value = pointsUsed;
 
     const equipWrap = document.getElementById('equipInputs');
