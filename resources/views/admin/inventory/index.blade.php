@@ -8,9 +8,6 @@
                 <h1 class="text-3xl font-bold text-gray-900">Inventory & Rentals</h1>
                 <p class="text-gray-600 mt-1">MANAGEMENT HUB</p>
             </div>
-            <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
-                + New Asset
-            </button>
         </div>
 
         @if(session('success'))
@@ -23,7 +20,6 @@
         <div class="mb-12">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-2xl font-bold text-gray-900">Sales Inventory <span class="text-sm text-gray-500 font-normal">(Products for Purchase)</span></h2>
-                <a href="#" class="text-blue-600 hover:text-blue-800 font-medium text-sm">Export CSV</a>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -88,6 +84,7 @@
                                         value="{{ $item->stock_quantity }}"
                                         class="w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         min="0"
+                                        max="{{ $item->max_capacity }}"
                                     >
                                     <button type="submit" class="ml-2 px-3 py-1 text-blue-600 hover:text-blue-800" title="Edit stock">
                                         ✏️
@@ -197,6 +194,7 @@
                                                 value="{{ $item->stock_quantity }}"
                                                 class="w-16 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                 min="0"
+                                                max="{{ $item->max_capacity }}"
                                             >
                                             <span class="text-gray-600">/</span>
                                             <span class="text-sm font-semibold text-gray-900">{{ $item->max_capacity }}</span>

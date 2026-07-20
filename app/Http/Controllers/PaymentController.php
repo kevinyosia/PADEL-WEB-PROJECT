@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use App\Models\Membership;
 use App\Models\MembershipPayment;
 use App\Models\Transaction;
@@ -293,27 +294,7 @@ class PaymentController extends Controller
             'midtrans_order_id' => $orderId,
         ]);
 
-        if ($transactionStatus === 'capture') {
-            if ($fraudStatus === 'challenge') {
-                $transaction->update(['status_pembayaran' => 'pending']);
-            } else if ($fraudStatus === 'accept') {
-                $transaction->update(['status_pembayaran' => 'lunas']);
-                // Update reservation status
-                $transaction->reservation->update(['status_reservasi' => 'completed']);
-            }
-        } else if ($transactionStatus === 'settlement') {
-            $transaction->update(['status_pembayaran' => 'lunas']);
-            $transaction->reservation->update(['status_reservasi' => 'completed']);
-        } else if ($transactionStatus === 'pending') {
-            $transaction->update(['status_pembayaran' => 'pending']);
-        } else if ($transactionStatus === 'deny') {
-            $transaction->update(['status_pembayaran' => 'belum_lunas']);
-        } else if ($transactionStatus === 'cancel' || $transactionStatus === 'expire') {
-            $transaction->update(['status_pembayaran' => 'belum_lunas']);
-            $transaction->reservation->update(['status_reservasi' => 'cancelled']);
-        } else if ($transactionStatus === 'refund') {
-            $transaction->update(['status_pembayaran' => 'refund']);
-        }
+        $this->syncStatusFromMidtrans($transaction, $transactionStatus, $fraudStatus);
 
         \Log::info('Midtrans webhook transaction updated', [
             'transaction_id' => $transaction->id,
@@ -419,6 +400,45 @@ class PaymentController extends Controller
             ->with('status', 'Pembayaran Anda masih menunggu konfirmasi. Silakan cek status beberapa saat lagi.');
     }
 
+    /**
+     * Cancel unpaid reservation when user leaves payment flow.
+     */
+    public function abandon(Request $request, $transactionId)
+    {
+        $transaction = Transaction::with('reservation.user.membership')->find($transactionId);
+
+        if (! $transaction) {
+            return response()->json(['error' => 'Transaction not found'], 404);
+        }
+
+        if ($transaction->reservation->user_id !== Auth::id()) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        if ($transaction->status_pembayaran === 'lunas') {
+            return response()->json(['status' => 'skipped', 'message' => 'Transaction already paid']);
+        }
+
+        DB::transaction(function () use ($transaction) {
+            $locked = Transaction::with('reservation.user.membership')
+                ->whereKey($transaction->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $locked || $locked->status_pembayaran === 'lunas') {
+                return;
+            }
+
+            $locked->update([
+                'status_pembayaran' => 'belum_lunas',
+            ]);
+
+            $this->releaseReservationForUnpaidTransaction($locked);
+        });
+
+        return response()->json(['status' => 'success']);
+    }
+
     private function syncStatusFromMidtrans(Transaction $transaction, ?string $transactionStatus, ?string $fraudStatus): void
     {
         if ($transactionStatus === 'capture') {
@@ -428,6 +448,7 @@ class PaymentController extends Controller
             }
 
             if ($fraudStatus === 'accept' || $fraudStatus === null) {
+                $this->applyPointDiscountIfEligible($transaction);
                 $transaction->update(['status_pembayaran' => 'lunas']);
                 $transaction->reservation->update(['status_reservasi' => 'completed']);
                 $this->grantMembershipRewardIfEligible($transaction);
@@ -436,6 +457,7 @@ class PaymentController extends Controller
         }
 
         if ($transactionStatus === 'settlement') {
+            $this->applyPointDiscountIfEligible($transaction);
             $transaction->update(['status_pembayaran' => 'lunas']);
             $transaction->reservation->update(['status_reservasi' => 'completed']);
             $this->grantMembershipRewardIfEligible($transaction);
@@ -450,7 +472,7 @@ class PaymentController extends Controller
         if (in_array($transactionStatus, ['deny', 'cancel', 'expire'], true)) {
             $transaction->update(['status_pembayaran' => 'belum_lunas']);
             if (in_array($transactionStatus, ['cancel', 'expire'], true)) {
-                $transaction->reservation->update(['status_reservasi' => 'cancelled']);
+                $this->releaseReservationForUnpaidTransaction($transaction);
             }
             return;
         }
@@ -458,6 +480,125 @@ class PaymentController extends Controller
         if ($transactionStatus === 'refund') {
             $transaction->update(['status_pembayaran' => 'refund']);
         }
+    }
+
+    /**
+     * Release reservation and refund used points for unpaid/cancelled transactions.
+     */
+    private function releaseReservationForUnpaidTransaction(Transaction $transaction): void
+    {
+        $transaction->loadMissing('reservation.user.membership');
+
+        $reservation = $transaction->reservation;
+        if (! $reservation) {
+            return;
+        }
+
+        if ($reservation->status_reservasi !== 'cancelled') {
+            $reservation->update(['status_reservasi' => 'cancelled']);
+        }
+
+        $usedPoints = (int) ($transaction->potongan_poin ?? 0);
+        if ($usedPoints <= 0) {
+            return;
+        }
+
+        $user = $reservation->user;
+        $membership = $user?->membership;
+        if (! $user || ! $membership) {
+            return;
+        }
+
+        $redeemNote = 'Penukaran poin untuk transaksi #' . $transaction->id;
+        $wasDeducted = PointHistory::query()
+            ->where('user_id', $user->id)
+            ->where('keterangan', $redeemNote)
+            ->exists();
+
+        if (! $wasDeducted) {
+            return;
+        }
+
+        $refundNote = 'Pengembalian poin dari transaksi #' . $transaction->id;
+        $alreadyRefunded = PointHistory::query()
+            ->where('user_id', $user->id)
+            ->where('keterangan', $refundNote)
+            ->exists();
+
+        if ($alreadyRefunded) {
+            return;
+        }
+
+        $membership->increment('total_poin_aktif', $usedPoints);
+
+        $remainingUsed = max(0, (int) $membership->total_poin_terpakai - $usedPoints);
+        $membership->update(['total_poin_terpakai' => $remainingUsed]);
+
+        PointHistory::create([
+            'user_id' => $user->id,
+            'jumlah_poin' => $usedPoints,
+            'keterangan' => $refundNote,
+        ]);
+    }
+
+    private function applyPointDiscountIfEligible(Transaction $transaction): void
+    {
+        $usedPoints = (int) ($transaction->potongan_poin ?? 0);
+        if ($usedPoints <= 0) {
+            return;
+        }
+
+        $transaction->loadMissing('reservation.user.membership');
+
+        $user = $transaction->reservation?->user;
+        if (! $user) {
+            return;
+        }
+
+        $note = 'Penukaran poin untuk transaksi #' . $transaction->id;
+        $alreadyDeducted = PointHistory::query()
+            ->where('user_id', $user->id)
+            ->where('keterangan', $note)
+            ->exists();
+
+        if ($alreadyDeducted) {
+            return;
+        }
+
+        DB::transaction(function () use ($user, $transaction, $usedPoints, $note) {
+            $membership = Membership::query()
+                ->where('user_id', $user->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $membership) {
+                \Log::warning('Point discount skipped because membership was not found', [
+                    'transaction_id' => $transaction->id,
+                    'user_id' => $user->id,
+                    'used_points' => $usedPoints,
+                ]);
+                return;
+            }
+
+            if ((int) $membership->total_poin_aktif < $usedPoints) {
+                \Log::warning('Point discount skipped because active points are insufficient', [
+                    'transaction_id' => $transaction->id,
+                    'user_id' => $user->id,
+                    'used_points' => $usedPoints,
+                    'active_points' => (int) $membership->total_poin_aktif,
+                ]);
+                return;
+            }
+
+            $membership->decrement('total_poin_aktif', $usedPoints);
+            $membership->increment('total_poin_terpakai', $usedPoints);
+
+            PointHistory::create([
+                'user_id' => $user->id,
+                'jumlah_poin' => -$usedPoints,
+                'keterangan' => $note,
+            ]);
+        });
     }
 
     private function grantMembershipRewardIfEligible(Transaction $transaction): void

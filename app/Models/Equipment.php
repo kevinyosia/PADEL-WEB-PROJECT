@@ -41,7 +41,8 @@ class Equipment extends Model
         if ($this->max_capacity == 0) {
             return 0;
         }
-        return (int) (($this->stock_quantity / $this->max_capacity) * 100);
+
+        return min(100, (int) (($this->stock_quantity / $this->max_capacity) * 100));
     }
 
     /**

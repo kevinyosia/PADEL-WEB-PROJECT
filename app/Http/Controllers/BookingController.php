@@ -6,7 +6,6 @@ use App\Models\Coach;
 use App\Models\Court;
 use App\Models\Equipment;
 use App\Models\Membership;
-use App\Models\PointHistory;
 use App\Models\Reservation;
 use App\Models\Transaction;
 use Carbon\Carbon;
@@ -256,7 +255,6 @@ class BookingController extends Controller
                 'jam_mulai' => Carbon::createFromFormat('H:i', $validated['jam_mulai'])->format('H:i:s'),
                 'jam_selesai' => Carbon::createFromFormat('H:i', $validated['jam_selesai'])->format('H:i:s'),
                 'status_reservasi' => 'confirmed',
-                'batas_pembayaran' => null,
             ]);
 
             if (! empty($pivotRows)) {
@@ -300,17 +298,6 @@ class BookingController extends Controller
                 'channel_pembayaran' => 'virtual_account',
                 'status_pembayaran' => 'belum_lunas',
             ]);
-
-            if ($pointDiscount > 0 && $membership) {
-                $membership->decrement('total_poin_aktif', $pointDiscount);
-                $membership->increment('total_poin_terpakai', $pointDiscount);
-
-                PointHistory::create([
-                    'user_id' => Auth::id(),
-                    'jumlah_poin' => -$pointDiscount,
-                    'keterangan' => 'Penukaran poin untuk transaksi #'.$transaction->id,
-                ]);
-            }
 
             return $transaction;
         });

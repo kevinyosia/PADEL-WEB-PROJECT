@@ -48,7 +48,6 @@
             </div>
             <p class="text-gray-500 text-xs font-semibold uppercase mb-2">Racket Rentals</p>
             <p class="text-3xl font-bold text-[#0f172a]">{{ number_format($racketRentals) }}</p>
-            <p class="text-xs text-gray-400 mt-3">4 damaged, 12 repair</p>
         </div>
 
         {{-- New Members Card --}}
@@ -70,11 +69,25 @@
         <h2 class="text-lg font-bold text-[#0f172a] mb-6">Revenue & Usage Trends</h2>
         <p class="text-xs text-gray-500 mb-6">Korelasi antara booking dan penjualan perlengkapan</p>
         
-        {{-- Simple Chart Placeholder --}}
         <div class="h-64 bg-gradient-to-b from-blue-50 to-transparent rounded-lg flex items-end justify-around px-6 py-4 gap-2">
             @foreach($revenueData as $day)
-            <div class="flex flex-col items-center gap-2">
-                <div class="h-24 bg-gradient-to-t from-blue-400 to-blue-300 rounded-t-lg w-8 opacity-70"></div>
+            @php
+                $bookingHeight = $day['bookings'] > 0 ? max(12, round(($day['bookings'] / $chartMaxBookings) * 144)) : 4;
+                $salesHeight = $day['sales'] > 0 ? max(12, round(($day['sales'] / $chartMaxSales) * 144)) : 4;
+            @endphp
+            <div class="flex h-full flex-col items-center justify-end gap-2">
+                <div class="flex h-40 items-end gap-1.5">
+                    <div
+                        class="w-5 rounded-t-lg bg-gradient-to-t from-blue-500 to-blue-300 {{ $day['bookings'] > 0 ? 'opacity-80' : 'opacity-30' }}"
+                        style="height: {{ $bookingHeight }}px"
+                        title="Bookings: {{ $day['bookings'] }}"
+                    ></div>
+                    <div
+                        class="w-5 rounded-t-lg bg-gradient-to-t from-amber-500 to-amber-300 {{ $day['sales'] > 0 ? 'opacity-80' : 'opacity-30' }}"
+                        style="height: {{ $salesHeight }}px"
+                        title="Sales: Rp{{ number_format($day['sales'], 0) }}"
+                    ></div>
+                </div>
                 <span class="text-xs text-gray-500 font-semibold">{{ $day['day'] }}</span>
             </div>
             @endforeach
@@ -93,10 +106,10 @@
         </div>
     </div>
 
-    {{-- ─── Recent Activity & Arena Status ─── --}}
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    {{-- ─── Recent Activity ─── --}}
+    <div>
         {{-- Recent Activity --}}
-        <div class="lg:col-span-2 bg-white rounded-xl p-8 border border-gray-100 shadow-sm">
+        <div class="bg-white rounded-xl p-8 border border-gray-100 shadow-sm">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-lg font-bold text-[#0f172a]">Recent Activity</h2>
                 <a href="{{ route('manager.reviews') }}" class="text-xs text-blue-600 hover:underline font-semibold">Lihat Semua</a>
@@ -117,32 +130,6 @@
                 @empty
                 <p class="text-xs text-gray-500 text-center py-6">Belum ada aktivitas</p>
                 @endforelse
-            </div>
-        </div>
-
-        {{-- Arena Status --}}
-        <div class="bg-gradient-to-br from-[#2d4533] to-[#1a2620] text-white rounded-xl p-8 shadow-lg">
-            <h2 class="text-lg font-bold mb-8 flex items-center gap-2">
-                🏟️ Arena Status
-            </h2>
-
-            <div class="space-y-6">
-                {{-- Court Occupancy --}}
-                <div>
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm font-semibold">Court Occupancy</span>
-                        <span class="text-xl font-bold">{{ $courtOccupancy }}%</span>
-                    </div>
-                    <div class="w-full bg-white/20 rounded-full h-2">
-                        <div class="bg-green-400 h-2 rounded-full" style="width: {{ $courtOccupancy }}%"></div>
-                    </div>
-                </div>
-
-                {{-- Peak Hour --}}
-                <div>
-                    <p class="text-xs uppercase tracking-widest text-white/70 font-bold mb-1">Peak Hour Today</p>
-                    <p class="text-2xl font-bold">{{ $peakHourDisplay }}</p>
-                </div>
             </div>
         </div>
     </div>

@@ -105,6 +105,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/payment/{transaction}', [PaymentController::class, 'paymentPage'])->name('payment.page');
     Route::get('/payment/{transaction}/status', [PaymentController::class, 'checkStatus'])->name('payment.status');
     Route::get('/payment/{transaction}/complete', [PaymentController::class, 'complete'])->name('payment.complete');
+    Route::post('/payment/{transaction}/abandon', [PaymentController::class, 'abandon'])->name('payment.abandon');
 
     Route::get('/coaches', [CoachesPageController::class, 'index'])->name('coaches.index');
     Route::get('/coaches/{coach}/slots', [CoachesPageController::class, 'slots'])->name('coaches.slots');

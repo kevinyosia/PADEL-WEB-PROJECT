@@ -216,12 +216,6 @@
     </style>
 </head>
 <body>
-    {{-- Bottom Left Navigation Buttons --}}
-    <div class="nav-buttons">
-        <a href="{{ route('login') }}" class="nav-btn">User Login</a>
-        <a href="{{ route('manager.login') }}" class="nav-btn secondary">Manager Login</a>
-    </div>
-
     <div class="login-container">
         <div class="login-card">
             {{-- Header --}}

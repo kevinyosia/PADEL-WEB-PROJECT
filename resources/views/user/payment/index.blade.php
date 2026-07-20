@@ -118,9 +118,43 @@
 <!-- Midtrans Snap Script -->
 <script src="{{ config('midtrans.snap_url') }}"></script>
 <script>
+    const transactionId = {{ $transaction->id }};
+    const initialPaymentStatus = '{{ $transaction->status_pembayaran }}';
+    let paymentCompleted = initialPaymentStatus === 'lunas';
+    let abandonSent = false;
+
+    function sendAbandonIfNeeded() {
+        if (paymentCompleted || abandonSent) {
+            return;
+        }
+
+        abandonSent = true;
+        const url = `{{ route('payment.abandon', $transaction->id) }}`;
+
+        try {
+            const data = new FormData();
+            data.append('_token', document.querySelector('meta[name="csrf-token"]').content);
+
+            if (navigator.sendBeacon) {
+                navigator.sendBeacon(url, data);
+                return;
+            }
+        } catch (error) {
+            console.warn('sendBeacon fallback:', error);
+        }
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({}),
+            keepalive: true,
+        }).catch(() => {});
+    }
+
     document.getElementById('payButton')?.addEventListener('click', function() {
-        const transactionId = {{ $transaction->id }};
-        
         // Get snap token from server
         fetch('{{ route("payment.snap-token") }}', {
             method: 'POST',
@@ -139,11 +173,13 @@
                 snap.pay(data.snap_token, {
                     onSuccess: function(result) {
                         console.log('Payment success:', result);
+                        paymentCompleted = true;
                         const orderId = encodeURIComponent(result?.order_id || '');
                         window.location.href = `/payment/${transactionId}/complete?order_id=${orderId}`;
                     },
                     onPending: function(result) {
                         console.log('Payment pending:', result);
+                        paymentCompleted = false;
                         const orderId = result?.order_id || '';
                         checkPaymentStatus(orderId);
                         alert('Pembayaran Anda sedang menunggu. Silakan selesaikan pembayaran sesuai instruksi VA.');
@@ -151,9 +187,11 @@
                     onError: function(result) {
                         console.log('Payment error:', result);
                         alert('Pembayaran gagal. Silakan coba lagi.');
+                        sendAbandonIfNeeded();
                     },
                     onClose: function() {
                         console.log('Payment dialog closed');
+                        sendAbandonIfNeeded();
                     }
                 });
             } else {
@@ -179,12 +217,17 @@
         .then(response => response.json())
         .then(data => {
             if (data.status === 'lunas') {
+                paymentCompleted = true;
                 const encodedOrderId = encodeURIComponent(orderId || data?.transaction?.midtrans_order_id || '');
                 window.location.href = `/payment/${transactionId}/complete?order_id=${encodedOrderId}`;
             }
         })
         .catch(error => console.error('Error checking status:', error));
     }
+
+    window.addEventListener('pagehide', function() {
+        sendAbandonIfNeeded();
+    });
 
     @if($transaction->status_pembayaran === 'pending')
     setInterval(() => checkPaymentStatus(), 10000);

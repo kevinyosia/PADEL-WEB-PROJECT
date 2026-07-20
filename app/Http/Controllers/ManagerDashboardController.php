@@ -107,18 +107,20 @@ class ManagerDashboardController extends Controller
 
         // Revenue & Usage Trends - last 7 days
         $revenueData = [];
-        $bookingCounts = [];
         $today = Carbon::now();
 
         for ($i = 6; $i >= 0; $i--) {
             $date = $today->copy()->subDays($i);
             $day = $date->format('D');
 
-            $dayRevenue = Transaction::whereHas('reservation', function ($query) use ($date) {
-                $query->whereDate('created_at', $date->toDateString());
+            $daySales = Transaction::whereHas('reservation', function ($query) use ($date) {
+                $query->whereDate('created_at', $date->toDateString())
+                    ->whereHas('equipment', function ($equipmentQuery) {
+                        $equipmentQuery->where('kategori', 'beli');
+                    });
             })
             ->where('status_pembayaran', 'lunas')
-            ->sum('grand_total');
+            ->sum('total_harga_perlengkapan');
 
             $dayBookings = Reservation::whereHas('transaction', function ($query) use ($date) {
                 $query->where('status_pembayaran', 'lunas')
@@ -127,14 +129,13 @@ class ManagerDashboardController extends Controller
 
             $revenueData[] = [
                 'day' => $day,
-                'revenue' => $dayRevenue,
-            ];
-
-            $bookingCounts[] = [
-                'day' => $day,
-                'count' => $dayBookings,
+                'bookings' => $dayBookings,
+                'sales' => $daySales,
             ];
         }
+
+        $chartMaxBookings = max(1, max(array_column($revenueData, 'bookings')));
+        $chartMaxSales = max(1, max(array_column($revenueData, 'sales')));
 
         // Recent Activity - last 5 bookings yang sudah lunas
         $recentActivity = Transaction::with(['reservation' => function ($query) {
@@ -161,26 +162,6 @@ class ManagerDashboardController extends Controller
             ];
         });
 
-        // Court Occupancy - courts yang sedang booked hari ini
-        $today_date = Carbon::now()->toDateString();
-        $totalCourts = \App\Models\Court::count();
-        $occupiedCourts = Reservation::whereDate('tanggal_booking', $today_date)
-            ->where('status_reservasi', 'confirmed')
-            ->distinct('court_id')
-            ->count();
-
-        $courtOccupancy = $totalCourts > 0 ? round(($occupiedCourts / $totalCourts) * 100) : 0;
-
-        // Peak Hour Today - jam yang paling banyak booking
-        $peakHour = Reservation::whereDate('tanggal_booking', $today_date)
-            ->where('status_reservasi', 'confirmed')
-            ->selectRaw('jam_mulai, COUNT(*) as count')
-            ->groupBy('jam_mulai')
-            ->orderByDesc('count')
-            ->first();
-
-        $peakHourDisplay = $peakHour ? $peakHour->jam_mulai . ':00' : 'N/A';
-
         // New Members - Users yang sign up kemarin (dari role 'customer')
         $yesterday = Carbon::now()->subDay()->startOfDay();
         $newMembers = User::where('role', 'customer')
@@ -195,10 +176,9 @@ class ManagerDashboardController extends Controller
             'ballSalesTrend',
             'racketRentalsTrend',
             'revenueData',
-            'bookingCounts',
+            'chartMaxBookings',
+            'chartMaxSales',
             'recentActivity',
-            'courtOccupancy',
-            'peakHourDisplay',
             'newMembers'
         ));
     }

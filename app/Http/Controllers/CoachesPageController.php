@@ -61,7 +61,7 @@ class CoachesPageController extends Controller
             }
         }
 
-        // Check which slots are already booked (confirmed / completed)
+        // Check which slots are already booked or held for payment.
         $bookedSlots = Reservation::query()
             ->where('coach_id', $coach->id)
             ->whereDate('tanggal_booking', $date)

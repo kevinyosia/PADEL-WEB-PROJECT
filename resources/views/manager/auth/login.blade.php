@@ -8,16 +8,6 @@
 </head>
 <body class="bg-[#44664d] h-screen flex items-center justify-center font-sans text-gray-800 relative">
 
-    {{-- Bottom Left Navigation Buttons --}}
-    <div class="fixed bottom-8 left-8 flex gap-3">
-        <a href="{{ route('login') }}" class="px-4 py-2 bg-[#44664d] text-white rounded-full text-sm font-semibold hover:bg-opacity-90 transition shadow-md">
-            User Login
-        </a>
-        <a href="{{ route('admin.login') }}" class="px-4 py-2 bg-[#8B7355] text-white rounded-full text-sm font-semibold hover:bg-opacity-90 transition shadow-md">
-            Admin Login
-        </a>
-    </div>
-
     <div class="w-full max-w-5xl flex flex-col md:flex-row items-center justify-between px-10">
         
         <div class="w-full md:w-1/2 flex justify-center md:justify-start mb-10 md:mb-0">

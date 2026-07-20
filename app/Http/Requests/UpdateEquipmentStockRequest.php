@@ -19,8 +19,11 @@ class UpdateEquipmentStockRequest extends FormRequest
      */
     public function rules(): array
     {
+        $equipment = $this->route('equipment') ?? $this->route('consumable');
+        $maxCapacity = $equipment ? (int) $equipment->max_capacity : 9999999;
+
         return [
-            'stock_quantity' => ['required', 'integer', 'min:0', 'max:9999999'],
+            'stock_quantity' => ['required', 'integer', 'min:0', 'max:' . max(0, $maxCapacity)],
         ];
     }
 
@@ -33,7 +36,7 @@ class UpdateEquipmentStockRequest extends FormRequest
             'stock_quantity.required' => 'Jumlah stok wajib diisi',
             'stock_quantity.integer' => 'Jumlah stok harus berupa angka',
             'stock_quantity.min' => 'Jumlah stok tidak boleh negatif',
-            'stock_quantity.max' => 'Jumlah stok terlalu besar',
+            'stock_quantity.max' => 'Jumlah stok tidak boleh melebihi kapasitas maksimal (:max)',
         ];
     }
 }

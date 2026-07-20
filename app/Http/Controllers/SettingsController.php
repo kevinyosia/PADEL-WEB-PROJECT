@@ -18,6 +18,9 @@ class SettingsController extends Controller
 
         $reservations = Reservation::with(['court', 'transaction', 'equipment'])
             ->where('user_id', $user->id)
+            ->whereHas('transaction', function ($query) {
+                $query->where('status_pembayaran', 'lunas');
+            })
             ->orderBy('tanggal_booking', 'desc')
             ->get();
 
